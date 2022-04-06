@@ -116,14 +116,22 @@ int main(int argc, const char** argv)
     }
 
     while (key != 27) {
+        //清除画布，也就是把frame_buf 和 depth_buf 初始化为全0 和全无穷大
         r.clear(rst::Buffers::Color | rst::Buffers::Depth);
 
         r.set_model(get_model_matrix(angle, Eigen::Vector3f(1,0,0)));
         r.set_view(get_view_matrix(eye_pos));
         r.set_projection(get_projection_matrix(45, 1, 0.1, 50));
-
+        
+        //调用绘制函数，输入顶点ID和索引ID以及绘制图元方法
         r.draw(pos_id, ind_id, rst::Primitive::Triangle);
-
+        
+        
+        //第二点，OpenCV如何把一个点向量转化为一张图片的。
+        //首先用Mat构造一个image，Mat(nrows,ncols,type,fillValue)
+        //r.frame_buffer().data() 返回指针，指向vector的第一个元素的地址 C++11
+        //然后转换一下类型，从32位3通道Float类型转换为8位3通道unsigned类型
+        //然后显示出来，每隔10ms刷新。
         cv::Mat image(700, 700, CV_32FC3, r.frame_buffer().data());
         image.convertTo(image, CV_8UC3, 1.0f);
         cv::imshow("image", image);
