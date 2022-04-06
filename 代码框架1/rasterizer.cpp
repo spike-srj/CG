@@ -155,7 +155,7 @@ void rst::rasterizer::draw(rst::pos_buf_id pos_buffer, rst::ind_buf_id ind_buffe
                 mvp * to_vec4(buf[i[1]], 1.0f),
                 mvp * to_vec4(buf[i[2]], 1.0f)
         };
-        //把w归一化
+        //把w归一化，这一步是循环，vec指代v列表里的向量
         for (auto& vec : v) {
             vec /= vec.w();
         }
