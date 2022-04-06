@@ -27,7 +27,7 @@ rst::ind_buf_id rst::rasterizer::load_indices(const std::vector<Eigen::Vector3i>
 
 // Bresenham's line drawing algorithm
 // Code taken from a stack overflow answer: https://stackoverflow.com/a/16405254
-void rst::rasterizer::draw_line(Eigen::Vector3f begin, Eigen::Vector3f end)
+void rst::rasterizer::draw_line(Eigen::Vector3f begin, Eigen::Vector3f end)  //begin是向量的起点，end是向量终点
 {
     auto x1 = begin.x();
     auto y1 = begin.y();
@@ -60,7 +60,8 @@ void rst::rasterizer::draw_line(Eigen::Vector3f begin, Eigen::Vector3f end)
             xe=x1;
         }
         Eigen::Vector3f point = Eigen::Vector3f(x, y, 1.0f);
-        set_pixel(point,line_color);
+        set_pixel(point,line_color);  //这里用一个set_pixel函数，把每个顶点的x，y 输入，转换为其在frame_buf中的下标位置也就是图像中的像素点位置，并且涂上色。
+
         for(i=0;x<xe;i++)
         {
             x=x+1;
@@ -144,28 +145,28 @@ void rst::rasterizer::draw(rst::pos_buf_id pos_buffer, rst::ind_buf_id ind_buffe
     float f1 = (100 - 0.1) / 2.0;
     float f2 = (100 + 0.1) / 2.0;
 
-    Eigen::Matrix4f mvp = projection * view * model;
-    for (auto& i : ind)
+    Eigen::Matrix4f mvp = projection * view * model;  //构建mvp矩阵
+    for (auto& i : ind)  //i是index序列
     {
         Triangle t;
-
+        //把三个顶点转化为其次坐标并乘以mvp矩阵
         Eigen::Vector4f v[] = {
                 mvp * to_vec4(buf[i[0]], 1.0f),
                 mvp * to_vec4(buf[i[1]], 1.0f),
                 mvp * to_vec4(buf[i[2]], 1.0f)
         };
-
+        //把w归一化
         for (auto& vec : v) {
             vec /= vec.w();
         }
-
+        //把三个顶点进行视口变化
         for (auto & vert : v)
         {
             vert.x() = 0.5*width*(vert.x()+1.0);
             vert.y() = 0.5*height*(vert.y()+1.0);
             vert.z() = vert.z() * f1 + f2;
         }
-
+        //把三个顶点赋予给三角形，按照index的指定顺序。（这里不用赋值w值）
         for (int i = 0; i < 3; ++i)
         {
             t.setVertex(i, v[i].head<3>());
@@ -176,16 +177,17 @@ void rst::rasterizer::draw(rst::pos_buf_id pos_buffer, rst::ind_buf_id ind_buffe
         t.setColor(0, 255.0,  0.0,  0.0);
         t.setColor(1, 0.0  ,255.0,  0.0);
         t.setColor(2, 0.0  ,  0.0,255.0);
-
+        //最后把三角形交给 rasterize_wireframe(t); 进行线框绘制.这里的的绘制顺序是：2->0 , 2->1 , 1->0 ， 这个应该是随意给的，不是很影响
+        //rasterize_wireframe 调用draw_line函数进行绘制每一根线
         rasterize_wireframe(t);
     }
 }
 
 void rst::rasterizer::rasterize_wireframe(const Triangle& t)
 {
-    draw_line(t.c(), t.a());
-    draw_line(t.c(), t.b());
-    draw_line(t.b(), t.a());
+    draw_line(t.c(), t.a());  //2->0
+    draw_line(t.c(), t.b());  //2->1
+    draw_line(t.b(), t.a());  //1->0
 }
 
 void rst::rasterizer::set_model(const Eigen::Matrix4f& m)
@@ -226,6 +228,7 @@ int rst::rasterizer::get_index(int x, int y)
     return (height-y)*width + x;
 }
 
+//这里用一个set_pixel函数，把每个顶点的x，y 输入，转换为其在frame_buf中的下标位置也就是图像中的像素点位置，并且涂上色
 void rst::rasterizer::set_pixel(const Eigen::Vector3f& point, const Eigen::Vector3f& color)
 {
     //old index: auto ind = point.y() + point.x() * width;
