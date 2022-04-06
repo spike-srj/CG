@@ -28,6 +28,24 @@ int main()
     N = cosrot*view + (1-cosrot)*n*n.transpose() + sinrot*N;
     model.block(0,0,3,3)= N.block(0,0,3,3);
     std::cout << model << std::endl;
-
+    
     return 0;
+}
+
+//回去在虚拟机上试试
+int main()
+{
+    Eigen::Vector4f v[] = 
+    {
+        (1,1,1,1),
+        (2,2,2,1),
+        (3,3,3,1)
+    };
+    for (auto & vert : v)
+        {
+            cout << "vert:" << vert << "\t";
+            cout << "vert.x()" << vert.x() << "\t";
+            cout << "vert.y()" << vert.y() << endl;
+            
+        }
 }
