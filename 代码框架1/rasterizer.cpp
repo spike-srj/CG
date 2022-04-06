@@ -217,7 +217,7 @@ void rst::rasterizer::clear(rst::Buffers buff)
     }
 }
 
-rst::rasterizer::rasterizer(int w, int h) : width(w), height(h)
+rst::rasterizer::rasterizer(int w, int h) : width(w), height(h)  //传入w，h，并将w，h赋值给width和height
 {
     frame_buf.resize(w * h);
     depth_buf.resize(w * h);
