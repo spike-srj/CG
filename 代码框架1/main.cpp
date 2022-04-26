@@ -85,15 +85,16 @@ int main(int argc, const char** argv)
             return 0;
     }
 
-    rst::rasterizer r(700, 700);//can't change
+    rst::rasterizer r(700, 700);//实例化光栅器r，分辨率为700*700.构造frame_buf和depth_buf（见hpp）
 
     Eigen::Vector3f eye_pos = {0, 0, 5};//look from z axis and the distance is 5 
 
-    std::vector<Eigen::Vector3f> pos{{2, 0, -2}, {0, 2, -2}, {-2, 0, -2}};
+    std::vector<Eigen::Vector3f> pos{{2, 0, -2}, {0, 2, -2}, {-2, 0, -2}};//给定三个点
 
     std::vector<Eigen::Vector3i> ind{{0, 1, 2}};
-
-    auto pos_id = r.load_positions(pos);//auto can indenty the type automaticly
+    
+    //然后把pos 和ind 传给光栅器，得到它们的ID,这里做的相当于顶点着色器
+    auto pos_id = r.load_positions(pos);//pos是三个点，返回的id就代表三个点
     auto ind_id = r.load_indices(ind);
 
     int key = 0;
@@ -115,7 +116,8 @@ int main(int argc, const char** argv)
         return 0;
     }
 
-    while (key != 27) {
+    while (key != 27) //除非键盘输入“Esc”结束程序，否则一直循环
+    {
         //清除画布，也就是把frame_buf 和 depth_buf 初始化为全0 和全无穷大
         r.clear(rst::Buffers::Color | rst::Buffers::Depth);
 
