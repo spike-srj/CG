@@ -8,11 +8,13 @@
 #include <math.h>
 #include <stdexcept>
 
+//pos_buf和ind_buf不不不会传入draw函数，传入的是return的id
+//pos_buf_id、ind_buf_id是结构体，类似int。pos_buf和ind_buf是r光栅化器的属性
 
 rst::pos_buf_id rst::rasterizer::load_positions(const std::vector<Eigen::Vector3f> &positions)
 {
-    auto id = get_next_id();
-    pos_buf.emplace(id, positions);
+    auto id = get_next_id();  //get_next_id()是一个函数{next_id++},next_id初始值为0，0++还是返回0，所以这里返回的id从0开始。下面的ind_id同理
+    pos_buf.emplace(id, positions);  //传入位置的同时更新pos_buf,可通过id快速查找位置。比如id=0；pos={{2, 0, -2}, {0, 2, -2}, {-2, 0, -2}}
 
     return {id};
 }
@@ -135,12 +137,14 @@ auto to_vec4(const Eigen::Vector3f& v3, float w = 1.0f)
 
 void rst::rasterizer::draw(rst::pos_buf_id pos_buffer, rst::ind_buf_id ind_buffer, rst::Primitive type)
 {
-    if (type != rst::Primitive::Triangle)
+    if (type != rst::Primitive::Triangle)//如果main中输入的绘制元图方法不为三角形，则报错
     {
         throw std::runtime_error("Drawing primitives other than triangle is not implemented yet!");
     }
-    auto& buf = pos_buf[pos_buffer.pos_id];
-    auto& ind = ind_buf[ind_buffer.ind_id];
+    auto& buf = pos_buf[pos_buffer.pos_id];  //从pos_buf和ind_buf中取出点和index。pos_buffer是main中返回的id，加了.pos_id也是一个id，
+    auto& ind = ind_buf[ind_buffer.ind_id];  //pos_buf[id]是它对应的pos；ind_buf[id]是它对应的ind.
+                                             //比如buf=pos_buf[0]={{2, 0, -2}, {0, 2, -2}, {-2, 0, -2}}；ind=ind_buf[0]={{0, 1, 2}}
+                                             // 这里的pos_buf[0]、ind_buf[0]方括号中的值每次只能是一个，根据main中传入的来
 
     float f1 = (100 - 0.1) / 2.0;
     float f2 = (100 + 0.1) / 2.0;
