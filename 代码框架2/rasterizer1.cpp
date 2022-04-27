@@ -183,22 +183,22 @@ void rst::rasterizer::set_projection(const Eigen::Matrix4f& p)
     projection = p;
 }
 
-void rst::rasterizer::clear(rst::Buffers buff)
+void rst::rasterizer::clear(rst::Buffers buff)//清除画布，也就是把frame_buf 和 depth_buf 初始化为全0 和全无穷大  对应main中的r.clear(rst::Buffers::Color | rst::Buffers::Depth);
 {
     if ((buff & rst::Buffers::Color) == rst::Buffers::Color)
     {
-        std::fill(frame_buf.begin(), frame_buf.end(), Eigen::Vector3f{0, 0, 0});
+        std::fill(frame_buf.begin(), frame_buf.end(), Eigen::Vector3f{0, 0, 0});  //将buff中每一个元素初始化为{0, 0, 0}
     }
     if ((buff & rst::Buffers::Depth) == rst::Buffers::Depth)
     {
-        std::fill(depth_buf.begin(), depth_buf.end(), std::numeric_limits<float>::infinity());
+        std::fill(depth_buf.begin(), depth_buf.end(), std::numeric_limits<float>::infinity());  //将buff中每一个元素初始化为无穷大
     }
 }
 
 rst::rasterizer::rasterizer(int w, int h) : width(w), height(h)  //这里的w、h=700
 {
-    frame_buf.resize(w * h);  //buf都是一维的数组，存储坐标（x，y）时需要将它转换为index，也就是用下面get_index算法将二维的坐标映射到一维的buf上
-    depth_buf.resize(w * h);
+    frame_buf.resize(w * h);  //buf存储的是一个个{x，x，x}数组表示颜色，每个数组（像素）对应一个index。
+    depth_buf.resize(w * h);  //存储坐标（x，y）时需要用下面get_index算法将该坐标对应的index算出来，以便在buff里修改该坐标的颜色
 }
 
 int rst::rasterizer::get_index(int x, int y)
