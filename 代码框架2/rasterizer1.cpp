@@ -129,7 +129,8 @@ void rst::rasterizer::draw(pos_buf_id pos_buffer, ind_buf_id ind_buffer, col_buf
 }
 
 //Screen space rasterization
-void rst::rasterizer::rasterize_triangle(const Triangle& t) {
+void rst::rasterizer::rasterize_triangle(const Triangle& t)  //三角形栅格化（光栅化）算法；已知的是三个顶点坐标
+{
     
     auto v = t.toVector4();
     float x_min = std::min(v[0].x(),std::min(v[1].x(),v[2].x()));
@@ -143,26 +144,22 @@ void rst::rasterizer::rasterize_triangle(const Triangle& t) {
         for (int y = y_min; y < y_max; y++)
         {
             if (insideTriangle(x, y, t.v))
-            {
+            {   
+                //利用重心插值计算当前坐标（x，y）对应的 z
                 float alpha, beta, gamma;
                 auto tup = computeBarycentric2D(x, y, t.v);
                 std::tie(alpha,beta,gamma) = tup;
                 float w_reciprocal = 1.0/(alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
                 float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
-                z_interpolated *= w_reciprocal;
-                // If so, use the following code to get the interpolated z value.
-                //auto[alpha, beta, gamma] = computeBarycentric2D(x, y, t.v);
-                //float w_reciprocal = 1.0/(alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
-                //float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
-                //z_interpolated *= w_reciprocal;
+                z_interpolated *= w_reciprocal; 
 
                 // TODO : set the current pixel (use the set_pixel function) to the color of the triangle (use getColor function) if it should be painted.
-                int index = get_index(x,y);
+                int index = get_index(x,y);  //计算出来的z需要和对应的depth_buf比较，但buf是一维的，因此用get_index找到（x，y）在一维数组buf中对应的index
                 if (z_interpolated < depth_buf[index])
                 {
                     Eigen::Vector3f p;
                     p << x,y,z_interpolated;
-                    set_pixel(p,t.getColor());
+                    set_pixel(p,t.getColor());  //set_pixel是为了获得p的坐标（只用到了x，y）在frame_buf里对应的index，再更新这个index处的颜色（颜色变成红色就是把该像素画在图上的过程）
                     depth_buf[index] = z_interpolated;
                 }
             }
@@ -198,9 +195,9 @@ void rst::rasterizer::clear(rst::Buffers buff)
     }
 }
 
-rst::rasterizer::rasterizer(int w, int h) : width(w), height(h)
+rst::rasterizer::rasterizer(int w, int h) : width(w), height(h)  //这里的w、h=700
 {
-    frame_buf.resize(w * h);
+    frame_buf.resize(w * h);  //buf都是一维的数组，存储坐标（x，y）时需要将它转换为index，也就是用下面get_index算法将二维的坐标映射到一维的buf上
     depth_buf.resize(w * h);
 }
 
