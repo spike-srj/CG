@@ -1,0 +1,3 @@
+/home/cs18/Documents/代码框架4/build/CMakeFiles/rebuild_cache.dir
+/home/cs18/Documents/代码框架4/build/CMakeFiles/BezierCurve.dir
+/home/cs18/Documents/代码框架4/build/CMakeFiles/edit_cache.dir
