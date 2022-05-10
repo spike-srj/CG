@@ -122,7 +122,7 @@ inline bool Bounds3::IntersectP(const Ray& ray, const Vector3f& invDir,
         t_Min_z = t_Max_z;
         t_Max_z = t;
     }
- 
+    //一共三对面，每对面有个[t_min,t_max]，求三个集合的交集
     float t_enter = std::max(t_Min_x,std::max(t_Min_y,t_Min_z));
     float t_exit =  std::min(t_Max_x,std::min(t_Max_y,t_Max_z));
     if(t_enter<t_exit&&t_exit>=0)
