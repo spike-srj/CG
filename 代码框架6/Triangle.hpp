@@ -210,6 +210,7 @@ inline Bounds3 Triangle::getBounds() { return Union(Bounds3(v0, v1), v2); }
 
 inline Intersection Triangle::getIntersection(Ray ray)
 {
+    //这里的框架直接给出了作业5的大部分答案，相比作业5多了一个结构体Intersection，该结构体集成了很多交点信息，而不只是true or false
     Intersection inter;
 
     if (dotProduct(ray.direction, normal) > 0)
@@ -236,12 +237,12 @@ inline Intersection Triangle::getIntersection(Ray ray)
         return inter;
     }
     if(t_tmp>0 && u>=0 && v>=0 &&(1-u-v)>=0){
-        inter.coords = ray(t_tmp);
-        inter.distance = t_tmp;
-        inter.happened = true;
-        inter.m = m;
-        inter.obj = this;
-        inter.normal = normal;
+        inter.coords = ray(t_tmp);  //坐标可以直接将时间t带进公式求得
+        inter.distance = t_tmp;  //看样子速度是单位1
+        inter.happened = true;  //光线是否和三角形相交
+        inter.m = m;  //材质
+        inter.obj = this;  //这里作为一个指针，指向本对象，也就是this。指代我们的三角形
+        inter.normal = normal;  //交点处三角形法线
         return inter;
     }
 
