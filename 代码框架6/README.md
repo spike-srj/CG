@@ -1,3 +1,7 @@
 
-I've finished task ...
+BVH里的getIntersection作用是返回光线和三角形的交点.
+getIntersection本身会求光线和box的交点，如果有交点会判断该交点是否是叶子，不是的话继续递归
+——在getIntersection里会调用Bound.IntersectP，来判断光线是否和box有交点
+——如果有交点且是叶子，就会用Triangle.hpp里的getIntersection来进一步判断光线与里面三角形的交点
+
 
