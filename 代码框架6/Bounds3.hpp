@@ -96,12 +96,14 @@ inline bool Bounds3::IntersectP(const Ray& ray, const Vector3f& invDir,
     // invDir: ray direction(x,y,z), invDir=(1.0/x,1.0/y,1.0/z), use this because Multiply is faster that Division
     // dirIsNeg: ray direction(x,y,z), dirIsNeg=[int(x>0),int(y>0),int(z>0)], use this to simplify your logic
     // TODO test if ray bound intersects
+    //t=(px-ox)/dx 见笔记 invdir就是1/dx
     float t_Min_x = (pMin.x - ray.origin.x)*invDir[0];
     float t_Min_y = (pMin.y - ray.origin.y)*invDir[1];
     float t_Min_z = (pMin.z - ray.origin.z)*invDir[2];
     float t_Max_x = (pMax.x - ray.origin.x)*invDir[0];
     float t_Max_y = (pMax.y - ray.origin.y)*invDir[1];
     float t_Max_z = (pMax.z - ray.origin.z)*invDir[2];
+    //如果发射线的方向是反的，调换tmin和tmax
     if(!dirIsNeg[0])
     {
         float t = t_Min_x;
