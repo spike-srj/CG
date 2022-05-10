@@ -35,6 +35,7 @@ void Renderer::Render(const Scene& scene)
             // *scale*, and x (horizontal) variable with the *imageAspectRatio*
 
             // Don't forget to normalize this direction!
+            //框架与作业5不同，castray变成了scene里的函数，ray作为新的参数替代之前的eye_pos, dir,sence
             Vector3f dir = Vector3f(x, y, -1);
             dir = normalize(dir);
             Ray ray(eye_pos, dir);
