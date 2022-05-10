@@ -212,7 +212,8 @@ inline Intersection Triangle::getIntersection(Ray ray)
 {
     //这里的框架直接给出了作业5的大部分答案，相比作业5多了一个结构体Intersection，该结构体集成了很多交点信息，而不只是true or false
     Intersection inter;
-
+    //如果结果大于0，那么这两个向量夹角小于90度
+    //三角形的法线是朝着外面（人眼那侧），如果光线穿过三角形，他和法线的夹角应该是钝角。如果小于90度，说明光线也是朝向人眼那侧，根本不会朝着三角形发射，也就不存在交点
     if (dotProduct(ray.direction, normal) > 0)
         return inter;
     double u, v, t_tmp = 0;
