@@ -185,31 +185,41 @@ class ray {
 #include "ray.h"
 
 #include <iostream>
-
-//未知的全局函数
+//ray_color(ray)函数根据y值将蓝白做了个线性插值的混合, 我们这里把射线做了个单位化, 以保证y的取值范围(-1.0<y<1.0)。因为我们使用y轴做渐变, 所以你可以看到这个蓝白渐变也是竖直的。
+//为什么要将y单位化为[-1,1]
 vec3 ray_color(const ray& r) {
+    //unit_vector出现在vec3里,是用来归一化vec的，
     vec3 unit_direction = unit_vector(r.direction());
+    //接下来使用了一个标准的小技巧将y的范围从-1.0 ≤ y ≤ 1.0映射到了0 ≤ y ≤ 1.0。这样t=1.0时就是蓝色, 而t=0.0时就是白色
     auto t = 0.5*(unit_direction.y() + 1.0);
+    //现在我们采用的是线性混合(linear blend)或者说线性插值(liner interpolation)。或者简称其为lerp。一个lerp一般来说会是下面的形式:(1.0-t)*startvalue + t*endvalue
+}
     return (1.0-t)*vec3(1.0, 1.0, 1.0) + t*vec3(0.5, 0.7, 1.0);
 }
 
 int main() {
-    //设置图像的宽和高
+    //图像的宽高
     const int image_width = 200;
     const int image_height = 100;
 
     std::cout << "P3\n" << image_width << " " << image_height << "\n255\n";
+    //发出射线的原点从图像的左下角开始沿着xy方向做增量直至遍历全图
     vec3 lower_left_corner(-2.0, -1.0, -1.0);
+    //纬度上限
     vec3 horizontal(4.0, 0.0, 0.0);
+    //经度上限
     vec3 vertical(0.0, 2.0, 0.0);
-    //摄像机的位置，也就是光线的起点，从这发出光，首先射向左下角
+    //摄像机/光线的起点，第一条光线应该是（-2，-1，-1）
     vec3 origin(0.0, 0.0, 0.0);
+    //从左上角开始遍历
+    //左下角坐标加上高就是左上角的位置
     for (int j = image_height-1; j >= 0; --j) {
         std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
         for (int i = 0; i < image_width; ++i) {
             auto u = double(i) / image_width;
             auto v = double(j) / image_height;
             ray r(origin, lower_left_corner + u*horizontal + v*vertical);
+            //此时光线方向尚未归一化，在ray_color处会归一化
             vec3 color = ray_color(r);
             color.write_color(std::cout);
         }
@@ -217,3 +227,50 @@ int main() {
 
     std::cerr << "\nDone.\n";
 }
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+bool hit_sphere(const vec3& center, double radius, const ray& r) {
+    vec3 oc = r.origin() - center;
+    auto a = dot(r.direction(), r.direction());
+    auto b = 2.0 * dot(oc, r.direction());
+    auto c = dot(oc, oc) - radius*radius;
+    auto discriminant = b*b - 4*a*c;
+    return (discriminant > 0);
+}
+
+vec3 ray_color(const ray& r) {
+    if (hit_sphere(vec3(0,0,-1), 0.5, r))
+        return vec3(1, 0, 0);
+    vec3 unit_direction = unit_vector(r.direction());
+    auto t = 0.5*(unit_direction.y() + 1.0);
+    return (1.0-t)*vec3(1.0, 1.0, 1.0) + t*vec3(0.5, 0.7, 1.0);
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//main.cc 球体表面法相
+double hit_sphere(const vec3& center, double radius, const ray& r) {
+    vec3 oc = r.origin() - center;
+    auto a = dot(r.direction(), r.direction());
+    auto b = 2.0 * dot(oc, r.direction());
+    auto c = dot(oc, oc) - radius*radius;
+    auto discriminant = b*b - 4*a*c;
+    if (discriminant < 0) {
+        return -1.0;
+    } else {
+        //相交时小的t
+        return (-b - sqrt(discriminant) ) / (2.0*a);
+    }
+}
+
+vec3 ray_color(const ray& r) {
+    auto t = hit_sphere(vec3(0,0,-1), 0.5, r);
+    if (t > 0.0) {
+        //r.at(t)得到相交位置的坐标，用该位置减去摄像机的位置，再归一化为[-1,1]。之前是将y单位化，这里是将交点和相机的向量单位化
+        vec3 N = unit_vector(r.at(t) - vec3(0,0,-1));
+        return 0.5*vec3(N.x()+1, N.y()+1, N.z()+1);
+    }
+    vec3 unit_direction = unit_vector(r.direction());
+    t = 0.5*(unit_direction.y() + 1.0);
+    return (1.0-t)*vec3(1.0, 1.0, 1.0) + t*vec3(0.5, 0.7, 1.0);
+}
+
