@@ -347,3 +347,117 @@ bool sphere::hit(const ray& r, double t_min, double t_max, hit_record& rec) cons
     return false;
 }
 #endif
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+bool front_face;
+//入射光线与发现如果是同方向的，说明光线是从球内部射到了内壁上
+if (dot(ray_direction, outward_normal) > 0.0) {
+    // ray is inside the sphere
+    //为了统一让法线与光线反向
+    normal = -outward_normal;
+    front_face = false;
+}
+else {
+    // ray is outside the sphere
+    normal = outward_normal;
+    front_face = true;
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//hittable.h 加入时间与面朝向
+ifndef HITTABLE_H
+#define HITTABLE_H
+
+#include "ray.h"
+
+struct hit_record {
+    vec3 p;
+    vec3 normal;
+    double t;
+    bool front_face;
+
+    inline void set_face_normal(const ray& r, const vec3& outward_normal) {
+        front_face = dot(r.direction(), outward_normal) < 0;
+        normal = front_face ? outward_normal :-outward_normal;
+    }
+};
+
+class hittable {
+    public:
+        virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const = 0;
+};
+#endif
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//sphere.h 加入射入面判别
+bool sphere::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
+    vec3 oc = r.origin() - center;
+    auto a = r.direction().length_squared();
+    auto half_b = dot(oc, r.direction());
+    auto c = oc.length_squared() - radius*radius;
+    auto discriminant = half_b*half_b - a*c;
+
+    if (discriminant > 0) {
+        auto root = sqrt(discriminant);
+        auto temp = (-half_b - root)/a;
+        if (temp < t_max && temp > t_min) {
+            rec.t = temp;
+            rec.p = r.at(rec.t);
+            vec3 outward_normal = (rec.p - center) / radius;
+            rec.set_face_normal(r, outward_normal);
+            return true;
+        }
+        temp = (-half_b + root) / a;
+        if (temp < t_max && temp > t_min) {
+            rec.t = temp;
+            rec.p = r.at(rec.t);
+            vec3 outward_normal = (rec.p - center) / radius;
+            rec.set_face_normal(r, outward_normal);
+            return true;
+        }
+    }
+    return false;
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//hittable_list.h
+#ifndef HITTABLE_LIST_H
+#define HITTABLE_LIST_H
+
+#include "hittable.h"
+#include <memory>
+#include <vector>
+
+using std::shared_ptr;
+using std::make_shared;
+
+class hittable_list: public hittable {
+    public:
+        hittable_list() {}
+        hittable_list(shared_ptr<hittable> object) { add(object); }
+
+        void clear() { objects.clear(); }
+        void add(shared_ptr<hittable> object) { objects.push_back(object); }
+
+        virtual bool hit(const ray& r, double tmin, double tmax, hit_record& rec) const;
+
+    public:
+        std::vector<shared_ptr<hittable>> objects;
+};
+
+bool hittable_list::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
+    hit_record temp_rec;
+    bool hit_anything = false;
+    auto closest_so_far = t_max;
+
+    for (const auto& object : objects) {
+        if (object->hit(r, t_min, closest_so_far, temp_rec)) {
+            hit_anything = true;
+            closest_so_far = temp_rec.t;
+            rec = temp_rec;
+        }
+    }
+
+    return hit_anything;
+}
+
+#endif
