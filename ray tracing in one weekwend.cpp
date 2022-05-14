@@ -274,3 +274,76 @@ vec3 ray_color(const ray& r) {
     return (1.0-t)*vec3(1.0, 1.0, 1.0) + t*vec3(0.5, 0.7, 1.0);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//为了在场景中渲染不止一个球，使用一个抽象类, 任何可能与光线求交的东西实现时都继承这个类, 并且让球以及球列表也都继承这个类，命名为hittable
+//hittable.h
+#ifndef HITTABLE_H
+#define HITTABLE_H
+#include "ray.h"
+
+//计算的结果存在一个结构体里
+struct hit_record {
+    vec3 p;
+    vec3 normal;
+    double t;
+};
+
+class hittable {
+    public:
+        //hittable类有个接受射线为参数的函数
+        //为了便利, 加入了一个区间 [t_min，t_max] 来判断相交是否有效
+        virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const = 0;
+};
+
+#endif
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+//这是继承自它的sphere球体类:
+//sphere.h
+#ifndef SPHERE_H
+#define SPHERE_H
+
+#include "hittable.h"
+#include "vec3.h"
+
+class sphere: public hittable {
+    public:
+        sphere() {}
+        sphere(vec3 cen, double r) : center(cen), radius(r) {};
+        //虚函数，具体定义在下面
+        virtual bool hit(const ray& r, double tmin, double tmax, hit_record& rec) const;
+
+    public:
+        vec3 center;
+        double radius;
+};
+
+bool sphere::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
+    vec3 oc = r.origin() - center;
+    auto a = r.direction().length_squared();
+    auto half_b = dot(oc, r.direction());
+    auto c = oc.length_squared() - radius*radius;
+    auto discriminant = half_b*half_b - a*c;
+
+    if (discriminant > 0) {
+        auto root = sqrt(discriminant);
+        auto temp = (-half_b - root)/a;
+        if (temp < t_max && temp > t_min) {
+            rec.t = temp;  //计算的t
+            rec.p = r.at(rec.t);  //交点位置
+            rec.normal = (rec.p - center) / radius;  //交点法线
+            return true;
+        }
+        //并不是要求两个交，而是，如果上一个没有满足给定的条件，就再算另一个
+        temp = (-half_b + root) / a;
+        if (temp < t_max && temp > t_min) {
+            rec.t = temp;
+            rec.p = r.at(rec.t);  
+            rec.normal = (rec.p - center) / radius;
+            return true;
+        }
+    }
+    return false;
+}
+#endif
