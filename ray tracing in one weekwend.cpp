@@ -620,3 +620,96 @@ int main() {
 
     std::cerr << "\nDone.\n";
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//我们需要一个算法来生成球体内的随机点。我们会采用最简单的做法:否定法(rejection method)。
+//首先, 在一个xyz取值范围为-1到+1的单位立方体中选取一个随机点, 如果这个点在球外就重新生成直到该点在球内:
+//vec3.h
+class vec3 {
+  public:
+    ...
+    inline static vec3 random() {
+        return vec3(random_double(), random_double(), random_double());
+    }
+
+    inline static vec3 random(double min, double max) {
+        return vec3(random_double(min,max), random_double(min,max), random_double(min,max));
+    }
+    vec3 random_in_unit_sphere() {
+        while (true) {
+            auto p = vec3::random(-1,1);
+            if (p.length_squared() >= 1) continue;
+            return p;
+        }
+    }
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    
+//main.cpp  
+vec3 ray_color(const ray& r, const hittable& world, int depth) {
+    hit_record rec;
+
+    // If we've exceeded the ray bounce limit, no more light is gathered.
+    if (depth <= 0)
+        return vec3(0,0,0);
+
+    if (world.hit(r, 0, infinity, rec)) {
+        vec3 target = rec.p + rec.normal + random_in_unit_sphere();
+        return 0.5 * ray_color(ray(rec.p, target - rec.p), world, depth-1);
+    }
+
+    vec3 unit_direction = unit_vector(r.direction());
+    auto t = 0.5*(unit_direction.y() + 1.0);
+    return (1.0-t)*vec3(1.0, 1.0, 1.0) + t*vec3(0.5, 0.7, 1.0);
+} 
+int main() {
+    const int image_width = 200;
+    const int image_height = 100;
+    const int samples_per_pixel = 100;
+    const int max_depth = 50;
+    std::cout << "P3\n" << image_width << " " << image_height << "\n255\n";
+
+    hittable_list world;
+    world.add(make_shared<sphere>(vec3(0,0,-1), 0.5));
+    world.add(make_shared<sphere>(vec3(0,-100.5,-1), 100));
+    camera cam;
+    for (int j = image_height-1; j >= 0; --j) {
+        std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
+        for (int i = 0; i < image_width; ++i) {
+            vec3 color(0, 0, 0);
+            for (int s = 0; s < samples_per_pixel; ++s) {
+                auto u = (i + random_double()) / image_width;
+                auto v = (j + random_double()) / image_height;
+                ray r = cam.get_ray(u, v);
+               color += ray_color(r, world, max_depth);
+            }
+            color.write_color(std::cout, samples_per_pixel);
+        }
+    }
+
+    std::cerr << "\nDone.\n";
+}   
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//拒绝法生成的点是单位球体积内的的随机点, 这样生成的向量大概率上会和法线方向相近, 并且极小概率会沿着入射方向反射回去。这个分布律的表达式有一个 [公式] 的系数, 
+//其中 [公式] 是反射光线距离法向量的夹角。这样当光线从一个离表面很小的角度射入时, 也会散射到一片很大的区域, 对最终颜色值的影响也会更低。
+//然而, 事实上的lambertian的分布律并不是这样的, 它的系数是 [公式] 。真正的lambertian散射后的光线距离法相比较近的概率会更高, 
+//但是分布律会更加均衡。这是因为我们选取的是单位球面上的点。我们可以通过在单位球内选取一个随机点, 然后将其单位化来获得该点。
+//上面的公式部分没看懂
+//vec3.h
+//采用的是极坐标，圆心z坐标为0
+vec3 random_unit_vector() {
+    auto a = random_double(0, 2*pi);
+    auto z = random_double(-1, 1);
+    auto r = sqrt(1 - z*z);
+    return vec3(r*cos(a), r*sin(a), z);
+}
+    
+//vec3.h
+vec3 random_in_hemisphere(const vec3& normal) {
+    vec3 in_unit_sphere = random_in_unit_sphere();
+    if (dot(in_unit_sphere, normal) > 0.0) // In the same hemisphere as the normal
+        return in_unit_sphere;
+    else
+        return -in_unit_sphere;
+}
+//不同随机数生成函数代表不同漫反射
+    
