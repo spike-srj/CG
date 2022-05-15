@@ -28,7 +28,8 @@ int main() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 创建vec3.h头文件，该文件在mac和win上运行会报错，只有虚拟机上可以不知道为啥
-
+#ifndef VEC3_H
+#define VEC3_H
 #include <iostream>
 #include <cmath>
 class vec3 {
@@ -72,11 +73,17 @@ class vec3 {
             return e[0]*e[0] + e[1]*e[1] + e[2]*e[2];
         }
         //没看懂
-        void write_color(std::ostream &out) {
+        void write_color(std::ostream &out, int samples_per_pixel) {
+            // Divide the color total by the number of samples.
+            auto scale = 1.0 / samples_per_pixel;
+            auto r = scale * e[0];
+            auto g = scale * e[1];
+            auto b = scale * e[2];
+
             // Write the translated [0,255] value of each color component.
-            out << static_cast<int>(255.999 * e[0]) << ' '
-                << static_cast<int>(255.999 * e[1]) << ' '
-                << static_cast<int>(255.999 * e[2]) << '\n';
+            out << static_cast<int>(256 * clamp(r, 0.0, 0.999)) << ' '
+                << static_cast<int>(256 * clamp(g, 0.0, 0.999)) << ' '
+                << static_cast<int>(256 * clamp(b, 0.0, 0.999)) << '\n';
         }
 
     public:
@@ -127,6 +134,7 @@ inline vec3 cross(const vec3 &u, const vec3 &v) {
 inline vec3 unit_vector(vec3 v) {
     return v / v.length();
 }
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //可以使用vec3类将我们的main函数改成这样
@@ -450,6 +458,7 @@ bool hittable_list::hit(const ray& r, double t_min, double t_max, hit_record& re
     auto closest_so_far = t_max;
 
     for (const auto& object : objects) {
+        //此处的object->hit调用的hit不是hittable_list::hit，而是object的hit，如果object是sphere，则调用sphere::hit
         if (object->hit(r, t_min, closest_so_far, temp_rec)) {
             hit_anything = true;
             closest_so_far = temp_rec.t;
@@ -461,3 +470,153 @@ bool hittable_list::hit(const ray& r, double t_min, double t_max, hit_record& re
 }
 
 #endif
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//shared_ptr<type>是指向一些已分配内存的类型的指针。每当你将它的值赋值给另一个智能指针时, 物体的引用计数器就会+1。当智能指针离开它所在的生存范围(例如代码块或者函数外), 物体的引用计数器就会-1。一旦引用计数器为0, 即没有任何智能指针指向该物体时, 该物体就会被销毁
+
+//一般来说, 智能指针首先由一个刚刚新分配好内存的物体来初始化:
+
+shared_ptr<double> double_ptr = make_shared<double>(0.37);
+shared_ptr<vec3>   vec3_ptr   = make_shared<vec3>(1.414214, 2.718281, 1.618034);
+shared_ptr<sphere> sphere_ptr = make_shared<sphere>(vec3(0,0,0), 1.0);
+
+//make_shared<thing>(thing_constructor_params ...)为指定的类型分配一段内存, 使用你指定的构造函数与参数来创建这个类, 并返回一个智能指针shared_ptr<thing>
+
+//使用C++的auto类型关键字, 可以自动推断make_shared<type>返回的智能指针类型, 于是我们可以把上面的代码简化为:
+
+auto double_ptr = make_shared<double>(0.37);
+auto vec3_ptr   = make_shared<vec3>(1.414214, 2.718281, 1.618034);
+auto sphere_ptr = make_shared<sphere>(vec3(0,0,0), 1.0);
+
+//我们在代码中使用智能指针的目的是为了能让多个几何图元共享一个实例(举个栗子, 一堆不同球体使用同一个纹理材质), 并且这样内存管理比起普通的指针更加的简单方便。
+
+//std::shared_ptr在头文件<memory>中
+
+#include<memory>
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+//定义一些常用的常数
+//rtweekend.h
+#ifndef RTWEEKEND_H
+#define RTWEEKEND_H
+
+#include <cmath>
+#include <cstdlib>
+#include <limits>
+#include <memory>
+
+
+// Usings
+
+using std::shared_ptr;
+using std::make_shared;
+
+// Constants
+
+const double infinity = std::numeric_limits<double>::infinity();
+const double pi = 3.1415926535897932385;
+
+// Utility Functions
+
+inline double degrees_to_radians(double degrees) {
+    return degrees * pi / 180;
+}
+
+inline double ffmin(double a, double b) { return a <= b ? a : b; }
+inline double ffmax(double a, double b) { return a >= b ? a : b; }
+//生成随机数
+//一个简单的实现方法是, 使用<cstdlib>中的rand()函数。这个函数会返回0到RAND_MAX中的一个任意整数。
+//无参函数
+inline double random_double() {
+    // Returns a random real in [0,1).
+    return rand() / (RAND_MAX + 1.0);
+}
+//有参函数
+inline double random_double(double min, double max) {
+    // Returns a random real in [min,max).
+    return min + (max-min)*random_double();
+}
+
+inline double clamp(double x, double min, double max) {
+    if (x < min) return min;
+    if (x > max) return max;
+    return x;
+}
+
+class camera {
+    public:
+        camera() {
+            lower_left_corner = vec3(-2.0, -1.0, -1.0);
+            horizontal = vec3(4.0, 0.0, 0.0);
+            vertical = vec3(0.0, 2.0, 0.0);
+            origin = vec3(0.0, 0.0, 0.0);
+        }
+
+        ray get_ray(double u, double v) {
+            return ray(origin, lower_left_corner + u*horizontal + v*vertical - origin);
+        }
+
+    public:
+        vec3 origin;
+        vec3 lower_left_corner;
+        vec3 horizontal;
+        vec3 vertical;
+};
+
+
+// Common Headers
+
+#include "ray.h"
+#include "vec3.h"
+
+#endif
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//main.cc
+#include "rtweekend.h"
+
+#include "hittable_list.h"
+#include "sphere.h"
+
+#include <iostream>
+vec3 ray_color(const ray& r, const hittable& world) {
+    hit_record rec;
+    if (world.hit(r, 0, infinity, rec)) {
+        return 0.5 * (rec.normal + vec3(1,1,1));
+    }
+    vec3 unit_direction = unit_vector(r.direction());
+    auto t = 0.5*(unit_direction.y() + 1.0);
+    return (1.0-t)*vec3(1.0, 1.0, 1.0) + t*vec3(0.5, 0.7, 1.0);
+}
+
+int main() {
+    const int image_width = 200;
+    const int image_height = 100;
+
+    std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
+
+    vec3 lower_left_corner(-2.0, -1.0, -1.0);
+    vec3 horizontal(4.0, 0.0, 0.0);
+    vec3 vertical(0.0, 2.0, 0.0);
+    vec3 origin(0.0, 0.0, 0.0);
+
+    hittable_list world;
+    world.add(make_shared<sphere>(vec3(0,0,-1), 0.5));
+    world.add(make_shared<sphere>(vec3(0,-100.5,-1), 100));
+
+    for (int j = image_height-1; j >= 0; --j) {
+        std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
+        for (int i = 0; i < image_width; ++i) {
+            auto u = double(i) / image_width;
+            auto v = double(j) / image_height;
+            ray r(origin, lower_left_corner + u*horizontal + v*vertical);
+
+            vec3 color = ray_color(r, world);
+
+            color.write_color(std::cout);
+        }
+    }
+
+    std::cerr << "\nDone.\n";
+}
