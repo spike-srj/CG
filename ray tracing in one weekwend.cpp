@@ -713,3 +713,240 @@ vec3 random_in_hemisphere(const vec3& normal) {
 }
 //不同随机数生成函数代表不同漫反射
     
+//vec3.h
+vec3 ray_color(const ray& r, const hittable& world, int depth) {
+    hit_record rec;
+
+    // If we've exceeded the ray bounce limit, no more light is gathered.
+    if (depth <= 0)
+        return vec3(0,0,0);
+
+    if (world.hit(r, 0.001, infinity, rec)) {
+        //target是光线经过漫反射后的方向
+        vec3 target = rec.p + random_in_hemisphere(rec.normal);
+        //光线可能会被漫反射多次才进入相机，这里只考虑反射次数对能量的衰减因此，因此反推也是一样
+        return 0.5 * ray_color(ray(rec.p, target - rec.p), world, depth-1);
+    }
+
+    vec3 unit_direction = unit_vector(r.direction());
+    auto t = 0.5*(unit_direction.y() + 1.0);
+    return (1.0-t)*vec3(1.0, 1.0, 1.0) + t*vec3(0.5, 0.7, 1.0);
+}
+
+    
+    
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    
+//设计并封装一个抽象的材质类    
+//material.h
+class material {
+    public:
+        virtual bool scatter(
+            const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered
+        ) const = 0;
+};
+
+    
+    
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    
+//hit_record存储着光线与模型相交点的信息，包括材质，这些信息是在计算hit时更新的
+//hittable.h
+#ifndef HITTABLE_H
+#define HITTABLE_H
+
+#include "rtweekend.h"
+
+class material;
+
+struct hit_record {
+    vec3 p;
+    vec3 normal;
+    shared_ptr<material> mat_ptr;
+    double t;
+    bool front_face;
+
+
+    inline void set_face_normal(const ray& r, const vec3& outward_normal) {
+        front_face = dot(r.direction(), outward_normal) < 0;
+        normal = front_face ? outward_normal :-outward_normal;
+    }
+};
+
+class hittable {
+    public:
+        virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const = 0;
+};
+
+#endif
+    
+    
+    
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    
+class sphere: public hittable {
+    public:
+        sphere() {}
+        //初始化时加上材质指针
+        sphere(vec3 cen, double r, shared_ptr<material> m)
+            : center(cen), radius(r), mat_ptr(m) {};
+
+        virtual bool hit(const ray& r, double tmin, double tmax, hit_record& rec) const;
+
+    public:
+        vec3 center;
+        double radius;
+        shared_ptr<material> mat_ptr;
+};
+
+bool sphere::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
+    vec3 oc = r.origin() - center;
+    auto a = r.direction().length_squared();
+    auto half_b = dot(oc, r.direction());
+    auto c = oc.length_squared() - radius*radius;
+    auto discriminant = half_b*half_b - a*c;
+
+    if (discriminant > 0) {
+        auto root = sqrt(discriminant);
+        auto temp = (-half_b - root)/a;
+        if (temp < t_max && temp > t_min) {
+            rec.t = temp;
+            rec.p = r.at(rec.t);
+            vec3 outward_normal = (rec.p - center) / radius;
+            rec.set_face_normal(r, outward_normal);
+            //更新了材质指针
+            rec.mat_ptr = mat_ptr;
+            return true;
+        }
+        temp = (-half_b + root) / a;
+        if (temp < t_max && temp > t_min) {
+            rec.t = temp;
+            rec.p = r.at(rec.t);
+            vec3 outward_normal = (rec.p - center) / radius;                
+            rec.set_face_normal(r, outward_normal);
+            //更新了材质指针
+            rec.mat_ptr = mat_ptr;
+            return true;
+        }
+    }
+    return false;
+}
+
+    
+    
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    
+//定义一种材质，它的散射函数是这样的    
+//material.h
+class lambertian : public material {
+    public:
+        lambertian(const vec3& a) : albedo(a) {}
+
+        virtual bool scatter(
+            const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered
+        ) const {
+            vec3 scatter_direction = rec.normal + random_unit_vector();
+            scattered = ray(rec.p, scatter_direction);
+            attenuation = albedo;
+            return true;
+        }
+
+    public:
+        vec3 albedo;
+};
+
+    
+    
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    
+//定义反射函数    
+//vec3.h
+vec3 reflect(const vec3& v, const vec3& n) {
+    return v - 2*dot(v,n)*n;
+}
+
+    
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//定义金属材质
+//material.h
+class metal : public material {
+    public:
+        metal(const vec3& a) : albedo(a) {}
+
+        virtual bool scatter(
+            const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered
+        ) const {
+            vec3 reflected = reflect(unit_vector(r_in.direction()), rec.normal);
+            scattered = ray(rec.p, reflected);
+            //给反照率赋值
+            attenuation = albedo;
+            return (dot(scattered.direction(), rec.normal) > 0);
+        }
+
+    public:
+        vec3 albedo;
+};
+
+    
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//main.cc
+//
+vec3 ray_color(const ray& r, const hittable& world, int depth) {
+    hit_record rec;
+
+    // If we've exceeded the ray bounce limit, no more light is gathered.
+    if (depth <= 0)
+        return vec3(0,0,0);
+
+    if (world.hit(r, 0.001, infinity, rec)) {
+        ray scattered;
+        //attenuation是反照率，这里初始化，在材质类里传值
+        vec3 attenuation;
+        //如果该光线与物体相交的话，根据相交处的材质信息判断光线在相交处是否有反射或散射
+        if (rec.mat_ptr->scatter(r, rec, attenuation, scattered))
+            //如果有散射或反射，再次判断散射后的光线是否与物体相交
+            //attenuation是反照率，可以理解为辐射衰减率
+            return attenuation * ray_color(scattered, world, depth-1);
+        return vec3(0,0,0);
+    }
+
+    vec3 unit_direction = unit_vector(r.direction());
+    auto t = 0.5*(unit_direction.y() + 1.0);
+    return (1.0-t)*vec3(1.0, 1.0, 1.0) + t*vec3(0.5, 0.7, 1.0);
+}
+
+    
+    
+//给场景加入金属球
+//main.cc
+int main() {
+    const int image_width = 200;
+    const int image_height = 100;
+    const int samples_per_pixel = 100;
+    const int max_depth = 50;
+
+    std::cout << "P3\n" << image_width << " " << image_height << "\n255\n";
+
+    hittable_list world;
+    //两个漫反射材质的球
+    world.add(make_shared<sphere>(
+        vec3(0,0,-1), 0.5, make_shared<lambertian>(vec3(0.7, 0.3, 0.3))));
+
+    world.add(make_shared<sphere>(
+        vec3(0,-100.5,-1), 100, make_shared<lambertian>(vec3(0.8, 0.8, 0.0))));
+    //两个金属材质的球
+    world.add(make_shared<sphere>(vec3(1,0,-1), 0.5, make_shared<metal>(vec3(0.8, 0.6, 0.2))));
+    world.add(make_shared<sphere>(vec3(-1,0,-1), 0.5, make_shared<metal>(vec3(0.8, 0.8, 0.8))));
+
+    camera cam;
+    for (int j = image_height-1; j >= 0; --j) {
+        std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
+        for (int i = 0; i < image_width; ++i) {
+            vec3 color(0, 0, 0);
+            for (int s = 0; s < samples_per_pixel; ++s) {
+                auto u = (i + random_double()) / image_width;
+                auto v = (j + random_double()) / image_height;
+                ray r = cam.get_ray(u, v);
+                color += ray_color(r, world, max_depth);
+            }
+            color.write_color(std::cout, samples_per_pixel);
+        }
+    }
+
+    std::cerr << "\nDone.\n";
+}
