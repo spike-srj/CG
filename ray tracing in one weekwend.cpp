@@ -836,6 +836,7 @@ bool sphere::hit(const ray& r, double t_min, double t_max, hit_record& rec) cons
 //material.h
 class lambertian : public material {
     public:
+        //初始化材质，给albedo赋值
         lambertian(const vec3& a) : albedo(a) {}
 
         virtual bool scatter(
@@ -923,7 +924,7 @@ int main() {
     std::cout << "P3\n" << image_width << " " << image_height << "\n255\n";
 
     hittable_list world;
-    //两个漫反射材质的球
+    //两个漫反射材质的球，make_shared<lambertian>(vec3(0.7, 0.3, 0.3))是初始化材质，给albedo赋值，(0.7, 0.3, 0.3)分别是RGB的反照率
     world.add(make_shared<sphere>(
         vec3(0,0,-1), 0.5, make_shared<lambertian>(vec3(0.7, 0.3, 0.3))));
 
@@ -950,3 +951,25 @@ int main() {
 
     std::cerr << "\nDone.\n";
 }
+
+    
+//给金属材质添加粗糙度，由反射方向的随机球半径表示，半径越大越有可能反射到球体内部，相当于被球吸收    
+//material.h
+class metal : public material {
+    public:
+        metal(const vec3& a, double f) : albedo(a), fuzz(f < 1 ? f : 1) {}
+
+        virtual bool scatter(
+            const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered
+        ) const {
+            vec3 reflected = reflect(unit_vector(r_in.direction()), rec.normal);
+            //reflected是从向交点出射的向量（单位向量），向量再加上一个单位向量，可能会达到球内部，相当于被吸收了。fuzz越大，射入球的概率越大
+            scattered = ray(rec.p, reflected + fuzz*random_in_unit_sphere());
+            attenuation = albedo;
+            return (dot(scattered.direction(), rec.normal) > 0);//dot<0我们认为吸收
+        }
+
+    public:
+        vec3 albedo;
+        double fuzz;
+};
