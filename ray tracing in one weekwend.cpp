@@ -973,3 +973,148 @@ class metal : public material {
         vec3 albedo;
         double fuzz;
 };
+
+    
+//折射光线计算    
+//vec3.h
+vec3 refract(const vec3& uv, const vec3& n, double etai_over_etat) {
+    auto cos_theta = dot(-uv, n);
+    vec3 r_out_parallel =  etai_over_etat * (uv + cos_theta*n);
+    vec3 r_out_perp = -sqrt(1.0 - r_out_parallel.length_squared()) * n;
+    return r_out_parallel + r_out_perp;
+}
+
+    
+    
+//只会发生折射的材质    
+//material.h
+class dielectric : public material {
+    public:
+        dielectric(double ri) : ref_idx(ri) {}
+
+        virtual bool scatter(
+            const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered
+        ) const {
+            attenuation = vec3(1.0, 1.0, 1.0);
+            double etai_over_etat;
+            //如果光线从材质外面射入，就要用外部的折射率除以材质的
+            if (rec.front_face) {
+                etai_over_etat = 1.0 / ref_idx;
+            } 
+            //如果光线从材质里面射入，材质的折射率为n，外面的折射率为n‘。
+            else {
+                etai_over_etat = ref_idx;
+            }
+
+            vec3 unit_direction = unit_vector(r_in.direction());
+            vec3 refracted = refract(unit_direction, rec.normal, etai_over_etat);
+            scattered = ray(rec.p, refracted);
+            return true;
+        }
+
+        double ref_idx;
+};
+
+ 
+    
+//一个可以在不发生折射时反射的材质    
+//material.h
+class dielectric : public material {
+    public:
+        dielectric(double ri) : ref_idx(ri) {}
+
+        virtual bool scatter(
+            const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered
+        ) const {
+            attenuation = vec3(1.0, 1.0, 1.0);
+            double etai_over_etat = (rec.front_face) ? (1.0 / ref_idx) : (ref_idx);
+
+            vec3 unit_direction = unit_vector(r_in.direction());
+            double cos_theta = ffmin(dot(-unit_direction, rec.normal), 1.0);
+            double sin_theta = sqrt(1.0 - cos_theta*cos_theta);
+            //当光线从光密介质进入光疏介质中如果入射角大于某个临界值的时候，就会发生全反射现象，此处光线的传播路径可以参考https://www.cnblogs.com/lv-anchoret/p/10217719.html
+            if (etai_over_etat * sin_theta > 1.0 ) {
+                vec3 reflected = reflect(unit_direction, rec.normal);
+                scattered = ray(rec.p, reflected);
+                return true;
+            }
+
+            vec3 refracted = refract(unit_direction, rec.normal, etai_over_etat);
+            scattered = ray(rec.p, refracted);
+            return true;
+        }
+
+    public:
+        double ref_idx;
+};
+
+    
+    
+//main 定义的材质
+world.add(make_shared<sphere>(
+    vec3(0,0,-1), 0.5, make_shared<lambertian>(vec3(0.1, 0.2, 0.5))));
+
+world.add(make_shared<sphere>(
+    vec3(0,-100.5,-1), 100, make_shared<lambertian>(vec3(0.8, 0.8, 0.0))));
+
+world.add(make_shared<sphere>(vec3(1,0,-1), 0.5, make_shared<metal>(vec3(0.8, 0.6, 0.2), 0.0)));
+world.add(make_shared<sphere>(vec3(-1,0,-1), 0.5, make_shared<dielectric>(1.5)));
+    
+    
+    
+    
+//折射率会随角度变化
+//material.h
+double schlick(double cosine, double ref_idx) {
+    auto r0 = (1-ref_idx) / (1+ref_idx);
+    r0 = r0*r0;
+    return r0 + (1-r0)*pow((1 - cosine),5);
+}
+    
+class dielectric : public material {
+    public:
+        dielectric(double ri) : ref_idx(ri) {}
+
+        virtual bool scatter(
+            const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered
+        ) const {
+            attenuation = vec3(1.0, 1.0, 1.0);
+            double etai_over_etat = (rec.front_face) ? (1.0 / ref_idx) : (ref_idx);
+
+            vec3 unit_direction = unit_vector(r_in.direction());
+            double cos_theta = ffmin(dot(-unit_direction, rec.normal), 1.0);
+            double sin_theta = sqrt(1.0 - cos_theta*cos_theta);
+            if (etai_over_etat * sin_theta > 1.0 ) {
+                vec3 reflected = reflect(unit_direction, rec.normal);
+                scattered = ray(rec.p, reflected);
+                return true;
+            }
+            double reflect_prob = schlick(cos_theta, etai_over_etat);
+            if (random_double() < reflect_prob)
+            {
+                vec3 reflected = reflect(unit_direction, rec.normal);
+                scattered = ray(rec.p, reflected);
+                return true;
+            }
+            vec3 refracted = refract(unit_direction, rec.normal, etai_over_etat);
+            scattered = ray(rec.p, refracted);
+            return true;
+        }
+
+    public:
+        double ref_idx;
+};
+    
+    
+    
+//此时得到的图像是实心玻璃球，会将背景位置颠倒
+//这里有个简单又好用的trick, 如果你将球的半径设为负值, 形状看上去并没什么变化, 但是法相全都翻转到内部去了。
+//所以就可以用这个特性来做出一个空心的玻璃球    
+world.add(make_shared<sphere>(vec3(0,0,-1), 0.5, make_shared<lambertian>(vec3(0.1, 0.2, 0.5))));
+world.add(make_shared<sphere>(
+    vec3(0,-100.5,-1), 100, make_shared<lambertian>(vec3(0.8, 0.8, 0.0))));
+world.add(make_shared<sphere>(vec3(1,0,-1), 0.5, make_shared<metal>(vec3(0.8, 0.6, 0.2), 0.3)));
+world.add(make_shared<sphere>(vec3(-1,0,-1), 0.5, make_shared<dielectric>(1.5)));
+world.add(make_shared<sphere>(vec3(-1,0,-1), -0.45, make_shared<dielectric>(1.5)));
+
+
