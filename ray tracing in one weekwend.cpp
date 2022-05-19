@@ -226,6 +226,9 @@ int main() {
         for (int i = 0; i < image_width; ++i) {
             auto u = double(i) / image_width;
             auto v = double(j) / image_height;
+            //此时r传入的参数是屏幕空间的（一个4*2的矩形），x~（-2，2）；y~（-1，1），因此要在上面将分辨率空间映射到屏幕空间！！
+            //先将分辨率空间通过除法转化为标准空间（0-1），再乘以屏幕空间的宽高，转化到屏幕空间
+            //raster space ——> NDC space ——> screen space; 后面还有——> world space
             ray r(origin, lower_left_corner + u*horizontal + v*vertical);
             //此时光线方向尚未归一化，在ray_color处会归一化
             vec3 color = ray_color(r);
