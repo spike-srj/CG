@@ -1,5 +1,17 @@
 整理这篇Ray tracing in one weekend 的思路，介绍整套程序运行的步骤
 
 首先当然是main函数
+for (int i = 0; i < image_width; ++i) {
+    vec3 color(0, 0, 0);
+    for (int s = 0; s < samples_per_pixel; ++s) {
+        auto u = (i + random_double()) / image_width;
+        auto v = (j + random_double()) / image_height;
+        ray r = cam.get_ray(u, v);
+       color += ray_color(r, world, max_depth);
+    }
+    color.write_color(std::cout, samples_per_pixel);
+    
+这一段与生成光线的坐标转换并无关系，u = (i + random_double()) / image_width 只是想给不同像素赋予不同颜色
 
-
+但是像素该赋什么值？在一开始的例子中是根据在途中的不同位置用线性插值法给了渐变的颜色值
+但我们想要的是光线追踪，一个像素的值该由从这一像素射出会碰到的颜色
