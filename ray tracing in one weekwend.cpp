@@ -464,6 +464,8 @@ bool hittable_list::hit(const ray& r, double t_min, double t_max, hit_record& re
         //此处的object->hit调用的hit不是hittable_list::hit，而是object的hit，如果object是sphere，则调用sphere::hit
         if (object->hit(r, t_min, closest_so_far, temp_rec)) {
             hit_anything = true;
+            //此时temp_rec.t已经在调用object->hit时更新了。closest_so_far一开始设为最大的时间，经理一次更新后可能是最小的t也可能不是，但上面判断object->hit中的时间上限会更新
+            //因此closest_so_far只会越来越小，它代表了与光线相交的第一个物体，后面的物体就被更新掉了
             closest_so_far = temp_rec.t;
             rec = temp_rec;
         }
@@ -847,6 +849,7 @@ class lambertian : public material {
         ) const {
             vec3 scatter_direction = rec.normal + random_unit_vector();
             scattered = ray(rec.p, scatter_direction);
+            //attenuation是衰减
             attenuation = albedo;
             return true;
         }
