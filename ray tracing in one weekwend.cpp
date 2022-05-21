@@ -905,13 +905,14 @@ vec3 ray_color(const ray& r, const hittable& world, int depth) {
         //attenuation是反照率，这里初始化，在材质类里传值
         vec3 attenuation;
         //如果该光线与物体相交的话，根据相交处的材质信息判断光线在相交处是否有反射或散射
+        //如果该光线与物体相交且不发生反射,则将这一块颜色设为vec3(0,0,0)，相当于相机看不见。因为模型本身不发光，如果最终光线落到模型上而不是落到光源，则认为相机看到的是黑色
         if (rec.mat_ptr->scatter(r, rec, attenuation, scattered))
             //如果有散射或反射，再次判断散射后的光线是否与物体相交
             //attenuation是反照率，可以理解为辐射衰减率
             return attenuation * ray_color(scattered, world, depth-1);
         return vec3(0,0,0);
     }
-
+    //如果该光线与背景相交或者反射后与背景相交（没有与物体相交），则将背景颜色赋予这一块像素，反射后的颜色会乘上相应的衰减率
     vec3 unit_direction = unit_vector(r.direction());
     auto t = 0.5*(unit_direction.y() + 1.0);
     return (1.0-t)*vec3(1.0, 1.0, 1.0) + t*vec3(0.5, 0.7, 1.0);
