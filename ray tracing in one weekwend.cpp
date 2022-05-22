@@ -1023,7 +1023,7 @@ class dielectric : public material {
 };
 
  
-    
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    
 //一个可以在不发生折射时反射的材质    
 //material.h
 class dielectric : public material {
@@ -1056,7 +1056,7 @@ class dielectric : public material {
 };
 
     
-    
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    
 //main 定义的材质
 world.add(make_shared<sphere>(
     vec3(0,0,-1), 0.5, make_shared<lambertian>(vec3(0.1, 0.2, 0.5))));
@@ -1069,7 +1069,7 @@ world.add(make_shared<sphere>(vec3(-1,0,-1), 0.5, make_shared<dielectric>(1.5)))
     
     
     
-    
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    
 //折射率会随角度变化
 //material.h
 double schlick(double cosine, double ref_idx) {
@@ -1113,7 +1113,7 @@ class dielectric : public material {
 };
     
     
-    
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    
 //此时得到的图像是实心玻璃球，会将背景位置颠倒
 //这里有个简单又好用的trick, 如果你将球的半径设为负值, 形状看上去并没什么变化, 但是法相全都翻转到内部去了。
 //所以就可以用这个特性来做出一个空心的玻璃球    
@@ -1124,4 +1124,78 @@ world.add(make_shared<sphere>(vec3(1,0,-1), 0.5, make_shared<metal>(vec3(0.8, 0.
 world.add(make_shared<sphere>(vec3(-1,0,-1), 0.5, make_shared<dielectric>(1.5)));
 world.add(make_shared<sphere>(vec3(-1,0,-1), -0.45, make_shared<dielectric>(1.5)));
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//camera.h
+//为相机添加fov和纵横比，fov改变会使得画面变化，最直接的就是lower_left_corner变化
+class camera {
+    public:
+        camera(
+            double vfov, // top to bottom, in degrees
+            double aspect
+        ) {
+            origin = vec3(0.0, 0.0, 0.0);
 
+            auto theta = degrees_to_radians(vfov);
+            auto half_height = tan(theta/2);
+            auto half_width = aspect * half_height;
+
+            lower_left_corner = vec3(-half_width, -half_height, -1.0);
+
+            horizontal = vec3(2*half_width, 0.0, 0.0);
+            vertical = vec3(0.0, 2*half_height, 0.0);
+        }
+
+        ray get_ray(double u, double v) {
+            return ray(origin, lower_left_corner + u*horizontal + v*vertical - origin);
+        }
+
+    public:
+        vec3 origin;
+        vec3 lower_left_corner;
+        vec3 horizontal;
+        vec3 vertical;
+};
+    
+    
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//进一步为相机添加起始点和朝向以及vup。此时画面（lower_left_corner）会随着起点和朝向以及fov的不同而不同
+class camera {
+    public:
+        camera(
+            vec3 lookfrom, vec3 lookat, vec3 vup,
+            double vfov, // top to bottom, in degrees
+            double aspect
+        ) {
+            origin = lookfrom;
+            vec3 u, v, w;
+
+            auto theta = degrees_to_radians(vfov);
+            auto half_height = tan(theta/2);
+            auto half_width = aspect * half_height;
+            w = unit_vector(lookfrom - lookat);
+            u = unit_vector(cross(vup, w));
+            v = cross(w, u);
+            //half_width、half_width只是个常数，而不是三维向量，因此计算时要乘以三维坐标的单位向量
+            //u、v、w不是（1，0，0）（0，1，0）这种单位向量，而是根据上面计算lookfrom - lookat得到的向量再单位化
+            lower_left_corner = origin - half_width*u - half_width*v - w;
+            
+            horizontal = 2*half_width*u;
+            vertical = 2*half_height*v;
+        }
+
+        ray get_ray(double s, double t) {
+            return ray(origin, lower_left_corner + s*horizontal + t*vertical - origin);
+        }
+
+    public:
+        vec3 origin;
+        vec3 lower_left_corner;
+        vec3 horizontal;
+        vec3 vertical;
+};
+    
+    
+//main.cc
+const auto aspect_ratio = double(image_width) / image_height;
+...
+camera cam(vec3(-2,2,1), vec3(0,0,-1), vup, 90, aspect_ratio);
