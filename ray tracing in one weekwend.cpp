@@ -1330,3 +1330,27 @@ int main() {
 //我们选择的像素在不同时刻有不同的颜色，最后给他取个平均值就能产生模糊的效果
     
     
+//首先给光线加上时间属性，这一属性将在main函数的cam.get_ray()中赋值，是随机数，随机的范围在cam的初始化时赋予（t1，t2）
+class ray {
+    public:
+        ray() {}
+        ray(const vec3& origin, const vec3& direction, double time = 0.0)
+            : orig(origin), dir(direction), tm(time)
+        {}
+
+        vec3 origin() const    { return orig; }
+        vec3 direction() const { return dir; }
+        double time() const    { return tm; }
+
+        vec3 at(double t) const {
+            return orig + t*dir;
+        }
+
+    public:
+        vec3 orig;
+        vec3 dir;
+        double tm;
+}; 
+    
+
+    
