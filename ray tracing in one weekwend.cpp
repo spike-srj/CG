@@ -1170,6 +1170,7 @@ class camera {
             vec3 u, v, w;
 
             auto theta = degrees_to_radians(vfov);
+            //这里默认相机z坐标（距离成像平面）为-1，固定不变。下面加入焦距后会变
             auto half_height = tan(theta/2);
             auto half_width = aspect * half_height;
             w = unit_vector(lookfrom - lookat);
@@ -1199,3 +1200,68 @@ class camera {
 const auto aspect_ratio = double(image_width) / image_height;
 ...
 camera cam(vec3(-2,2,1), vec3(0,0,-1), vup, 90, aspect_ratio);
+
+    
+    
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    
+//vec3.h 从一个单位小圆盘射出光线
+vec3 random_in_unit_disk() {
+    while (true) {
+        auto p = vec3(random_double(-1,1), random_double(-1,1), 0);
+        if (p.length_squared() >= 1) continue;
+        return p;
+    }
+}
+
+    
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//加入景深
+class camera {
+    public:
+        camera(
+            vec3 lookfrom, vec3 lookat, vec3 vup,
+            double vfov, // top to bottom, in degrees
+            double aspect, double aperture, double focus_dist
+        ) {
+            origin = lookfrom;
+            lens_radius = aperture / 2;
+
+            auto theta = degrees_to_radians(vfov);
+            //  half_height = tan(theta/2)*dis，这里将dis放到了后面，也就是*focus_dist
+            auto half_height = tan(theta/2);
+            auto half_width = aspect * half_height;
+
+            w = unit_vector(lookfrom - lookat);
+            u = unit_vector(cross(vup, w));
+            v = cross(w, u);
+            lower_left_corner = origin
+                              - half_width * focus_dist * u
+                              - half_height * focus_dist * v
+                              - focus_dist * w;
+
+            horizontal = 2*half_width*focus_dist*u;
+            vertical = 2*half_height*focus_dist*v;
+        }
+
+        ray get_ray(double s, double t) {
+            // 半径为lens_radius的随机圆
+            vec3 rd = lens_radius * random_in_unit_disk();
+            //取得点在一个二维平面内，所以要用相机坐标系修正，令这些点位于origin所处的uv平面内。之前不考虑景深时origin只是一个点，自然不需要用相机坐标系修正
+            vec3 offset = u * rd.x() + v * rd.y();
+
+            return ray(
+                //在原本只是一个点的origin附近一个圆内随机取点
+                origin + offset,
+                lower_left_corner + s*horizontal + t*vertical - origin - offset
+           );
+        }
+
+    public:
+        vec3 origin;
+        vec3 lower_left_corner;
+        vec3 horizontal;
+        vec3 vertical;
+        vec3 u, v, w;
+        double lens_radius;
+};    
+ 
