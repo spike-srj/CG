@@ -1353,4 +1353,173 @@ class ray {
 }; 
     
 
+//给相机添加快门时间t1,t2    
+class camera {
+    public:
+        camera(
+            vec3 lookfrom, vec3 lookat, vec3 vup,
+            double vfov, // top to bottom, in degrees
+            double aspect, double aperture, double focus_dist, double t0 = 0, double t1 = 0
+        ) {
+            origin = lookfrom;
+            lens_radius = aperture / 2;
+            time0 = t0;
+            time1 = t1;
+            auto theta = degrees_to_radians(vfov);
+            auto half_height = tan(theta/2);
+            auto half_width = aspect * half_height;
+
+            w = unit_vector(lookfrom - lookat);
+            u = unit_vector(cross(vup, w));
+            v = cross(w, u);
+
+            lower_left_corner = origin
+                              - half_width*focus_dist*u
+                              - half_height*focus_dist*v
+                              - focus_dist*w;
+
+            horizontal = 2*half_width*focus_dist*u;
+            vertical = 2*half_height*focus_dist*v;
+        }
+
+        ray get_ray(double s, double t) {
+            vec3 rd = lens_radius * random_in_unit_disk();
+            vec3 offset = u * rd.x() + v * rd.y();
+            return ray(
+                origin + offset,
+                lower_left_corner + s*horizontal + t*vertical - origin - offset,
+                random_double(time0, time1)
+            );
+        }
+
+    public:
+        vec3 origin;
+        vec3 lower_left_corner;
+        vec3 horizontal;
+        vec3 vertical;
+        vec3 u, v, w;
+        double lens_radius;
+        double time0, time1;  // shutter open/close times
+};
     
+    
+//    
+class moving_sphere : public hittable {
+    public:
+        moving_sphere() {}
+        moving_sphere(
+            vec3 cen0, vec3 cen1, double t0, double t1, double r, shared_ptr<material> m)
+            : center0(cen0), center1(cen1), time0(t0), time1(t1), radius(r), mat_ptr(m)
+        {};
+
+        virtual bool hit(const ray& r, double tmin, double tmax, hit_record& rec) const;
+
+        vec3 center(double time) const;
+
+    public:
+        vec3 center0, center1;
+        double time0, time1;
+        double radius;
+        shared_ptr<material> mat_ptr;
+};
+
+vec3 moving_sphere::center(double time) const{
+    return center0 + ((time - time0) / (time1 - time0))*(center1 - center0);
+}
+
+bool moving_sphere::hit(
+    const ray& r, double t_min, double t_max, hit_record& rec) const {
+    vec3 oc = r.origin() - center(r.time());
+    auto a = r.direction().length_squared();
+    auto half_b = dot(oc, r.direction());
+    auto c = oc.length_squared() - radius*radius;
+
+    auto discriminant = half_b*half_b - a*c;
+
+    if (discriminant > 0) {
+        auto root = sqrt(discriminant);
+
+        auto temp = (-half_b - root)/a;
+        if (temp < t_max && temp > t_min) {
+            rec.t = temp;
+            rec.p = r.at(rec.t);
+            vec3 outward_normal = (rec.p - center(r.time())) / radius;
+            rec.set_face_normal(r, outward_normal);
+            rec.mat_ptr = mat_ptr;
+            return true;
+        }
+
+        temp = (-half_b + root) / a;
+        if (temp < t_max && temp > t_min) {
+            rec.t = temp;
+            rec.p = r.at(rec.t);
+            vec3 outward_normal = (rec.p - center(r.time())) / radius;
+            rec.set_face_normal(r, outward_normal);
+            rec.mat_ptr = mat_ptr;
+            return true;
+        }
+    }
+    return false;
+}
+
+    
+    
+//材质
+class lambertian : public material {
+    public:
+        lambertian(const vec3& a) : albedo(a) {}
+
+        virtual bool scatter(
+            const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered
+        ) const {
+            vec3 scatter_direction = rec.normal + random_unit_vector();
+            scattered = ray(rec.p, scatter_direction, r_in.time());
+            attenuation = albedo;
+            return true;
+        }
+
+        vec3 albedo;
+};
+    
+    
+    
+hittable_list random_scene() {
+    hittable_list world;
+
+    world.add(make_shared<sphere>(
+        vec3(0,-1000,0), 1000, make_shared<lambertian>(vec3(0.5, 0.5, 0.5))));
+
+    int i = 1;
+    for (int a = -10; a < 10; a++) {
+        for (int b = -10; b < 10; b++) {
+            auto choose_mat = random_double();
+            vec3 center(a + 0.9*random_double(), 0.2, b + 0.9*random_double());
+            if ((center - vec3(4, .2, 0)).length() > 0.9) {
+                if (choose_mat < 0.8) {
+                    // diffuse
+                    auto albedo = vec3::random() * vec3::random();
+                    world.add(make_shared<moving_sphere>(
+                        center, center + vec3(0, random_double(0,.5), 0), 0.0, 1.0, 0.2,
+                        make_shared<lambertian>(albedo)));
+                } else if (choose_mat < 0.95) {
+                    // metal
+                    auto albedo = vec3::random(.5, 1);
+                    auto fuzz = random_double(0, .5);
+                    world.add(
+                        make_shared<sphere>(center, 0.2, make_shared<metal>(albedo, fuzz)));
+                } else {
+                    // glass
+                    world.add(make_shared<sphere>(center, 0.2, make_shared<dielectric>(1.5)));
+                }
+            }
+        }
+    }
+
+    world.add(make_shared<sphere>(vec3(0, 1, 0), 1.0, make_shared<dielectric>(1.5)));
+    world.add(make_shared<sphere>(
+        vec3(-4, 1, 0), 1.0, make_shared<lambertian>(vec3(0.4, 0.2, 0.1))));
+    world.add(make_shared<sphere>(
+        vec3(4, 1, 0), 1.0, make_shared<metal>(vec3(0.7, 0.6, 0.5), 0.0)));
+
+    return world;
+}
