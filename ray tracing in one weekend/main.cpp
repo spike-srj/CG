@@ -77,6 +77,7 @@ int main() {
     std::cout << "P3\n" << image_width << " " << image_height << "\n255\n";
 
     auto R = cos(pi/4);
+    //random_scene()返回的是hittable_list类，所以world是hittable_list类
     auto world = random_scene();
 
     vec3 lookfrom(13,2,3);
@@ -85,7 +86,8 @@ int main() {
     auto dist_to_focus = 10.0;
     auto aperture = 0.1;
     const auto aspect_ratio = double(image_width) / image_height;
-    camera cam(lookfrom, lookat, vup, 20, aspect_ratio, aperture, dist_to_focus);    for (int j = image_height-1; j >= 0; --j) {
+    camera cam(lookfrom, lookat, vup, 20, aspect_ratio, aperture, dist_to_focus);
+    for (int j = image_height-1; j >= 0; --j) {
         std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
         for (int i = 0; i < image_width; ++i) {
             vec3 color(0, 0, 0);
