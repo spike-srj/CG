@@ -1611,9 +1611,10 @@ bool hittable_list::bounding_box(double t0, double t1, aabb& output_box) const {
 
     for (const auto& object : objects) {
         //目前还没有哪个物体的bounding_box函数会返回false
-        //传入temp_box，在经过bounding——box函数后会变成该object的包围盒
+        //传入temp_box，在经过bounding_box函数后会变成该object的包围盒
         if (!object->bounding_box(t0, t1, temp_box)) return false;
-        //
+        //如果是第一个有包围盒的物体，则将刚刚计算得到的temp_box赋给output_box（output_box是哪里传来的？很重要）。
+        //如果不是第一个有包围盒的物体，则计算output_box和temp_box共同的包围盒并赋给output_box
         output_box = first_box ? temp_box : surrounding_box(output_box, temp_box);
         first_box = false;
     }
@@ -1623,11 +1624,11 @@ bool hittable_list::bounding_box(double t0, double t1, aabb& output_box) const {
     
 //求两个包围盒的包围盒
 aabb surrounding_box(aabb box0, aabb box1) {
-    //small是一个包含三个数的数组
+    //small是一个包含三个数的数组，分别指的是包围盒中三个维度区间的左端点集合和右端点集合
     vec3 small(ffmin(box0.min().x(), box1.min().x()),
                ffmin(box0.min().y(), box1.min().y()),
                ffmin(box0.min().z(), box1.min().z()));
-    //big同理
+    //big同理，是包围盒中三个维度区间的右端点集合
     vec3 big  (ffmax(box0.max().x(), box1.max().x()),
                ffmax(box0.max().y(), box1.max().y()),
                ffmax(box0.max().z(), box1.max().z()));
@@ -1636,7 +1637,10 @@ aabb surrounding_box(aabb box0, aabb box1) {
 }
     
     
-//bvh_node和sphere一样是hittable的子类，因此一样由hit和bounding_box
+//bvh_node和sphere一样是hittable的子类，因此一样有hit和bounding_box
+//现在我们开始着手，划分物体，并解决“光线是否击中了当前盒体”这个开篇的问题
+//首先，我们需要创建像开篇那张图中的一颗盒体范围树
+//树节点定义：
 //bvh.h
 class bvh_node : public hittable {
     public:
@@ -1654,6 +1658,7 @@ class bvh_node : public hittable {
         virtual bool bounding_box(double t0, double t1, aabb& output_box) const;
 
     public:
+    //shared_ptr是个容器类似vector，hittable是容器存储的数据类型，也可以是他的子类，比如sphere，bvh_node
         shared_ptr<hittable> left;
         shared_ptr<hittable> right;
         aabb box;
@@ -1679,7 +1684,7 @@ bool bvh_node::hit(const ray& r, double t_min, double t_max, hit_record& rec) co
 //看不懂    
 #include <algorithm>
 ...
-
+//这里bvh_node作用域下的bvh_node是什么意思？
 bvh_node::bvh_node(
     std::vector<shared_ptr<hittable>>& objects,
     size_t start, size_t end, double time0, double time1
@@ -1695,6 +1700,7 @@ bvh_node::bvh_node(
     if (object_span == 1) {
         left = right = objects[start];
     } else if (object_span == 2) {
+        //注意comparator在上面已经被赋值了box_xyz_compare，并通过下方的bool box_x_compare函数执行box_compare函数
         if (comparator(objects[start], objects[start+1])) {
             left = objects[start];
             right = objects[start+1];
