@@ -1526,7 +1526,12 @@ hittable_list random_scene() {
 }
 
     
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////  
+
+//怎么分堆。还得想想怎么去检测光线和包围盒相交
+//从现在开始, 我们会把轴对齐的包围盒叫成矩形平行管道：aabb
+//和击中那些会在屏幕上显示出来的物体时不同, 射线与AABB求交并不需要去获取那些法向啊交点啊这些东西, AABB不需要在屏幕上渲染出来。所以aabb是单独的类而不是hittable的子类
+
 class aabb {
     public:
         aabb() {}
@@ -1589,7 +1594,7 @@ bool sphere::bounding_box(double t0, double t1, aabb& output_box) const {
     return true;
 }
     
-//为什么hittable_list里还有bounding_box函数？参考hittable_list里的hit    
+//为什么hittable_list里还有bounding_box函数？参考hittable_list里的hit，在对单个物体求交时要先在hittable_list里遍历所有物体    
 bool hittable_list::bounding_box(double t0, double t1, aabb& output_box) const {
     if (objects.empty()) return false;
 
@@ -1597,7 +1602,9 @@ bool hittable_list::bounding_box(double t0, double t1, aabb& output_box) const {
     bool first_box = true;
 
     for (const auto& object : objects) {
+        //目前还没有哪个物体的bounding_box函数会返回false
         if (!object->bounding_box(t0, t1, temp_box)) return false;
+        //
         output_box = first_box ? temp_box : surrounding_box(output_box, temp_box);
         first_box = false;
     }
@@ -1605,14 +1612,17 @@ bool hittable_list::bounding_box(double t0, double t1, aabb& output_box) const {
     return true;
 }
     
-    
+//求两个包围盒的包围盒
 aabb surrounding_box(aabb box0, aabb box1) {
+    //small是一个包含三个数的数组
     vec3 small(ffmin(box0.min().x(), box1.min().x()),
                ffmin(box0.min().y(), box1.min().y()),
                ffmin(box0.min().z(), box1.min().z()));
+    //big同理
     vec3 big  (ffmax(box0.max().x(), box1.max().x()),
                ffmax(box0.max().y(), box1.max().y()),
                ffmax(box0.max().z(), box1.max().z()));
+    //将这两个数组带入aabb函数返回一个新的包围盒
     return aabb(small,big);
 }
     
@@ -1666,6 +1676,7 @@ bvh_node::bvh_node(
     size_t start, size_t end, double time0, double time1
 ) {
     int axis = random_int(0,2);
+    //嵌套条件运算符：先判断axis是否为真，如果是则返回box_x_compare，如果不是则判断axis是否等于1，如果是则返回box_y_compare，如果不是则返回box_z_compare
     auto comparator = (axis == 0) ? box_x_compare
                     : (axis == 1) ? box_y_compare
                                   : box_z_compare;
