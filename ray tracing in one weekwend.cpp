@@ -1535,6 +1535,7 @@ hittable_list random_scene() {
 class aabb {
     public:
         aabb() {}
+        //_min 和 _max 分别指的是包围盒中三个维度区间的左端点集合和右端点集合
         aabb(const vec3& a, const vec3& b) { _min = a; _max = b;}
 
         vec3 min() const {return _min; }
@@ -1542,6 +1543,11 @@ class aabb {
 
         bool hit(const ray& r, double tmin, double tmax) const {
             for (int a = 0; a < 3; a++) {
+                //不同的a代表不同的方向，每个方向都有一个t0，t1.这里用ffmin和ffmax后面括号里的内容是一样的，就是要将较小的值赋给t0，较大的给t1。
+                //一般情况下_min[a]的更小，但如果视线方向的分量r.direction()[a]为负则_max[a]的更小。下面改良后的代码利用
+                //if (invD < 0.0f)
+                //  std::swap(t0, t1);
+                //来替代了ffmin、ffmax后面冗长的代码
                 auto t0 = ffmin((_min[a] - r.origin()[a]) / r.direction()[a],
                                 (_max[a] - r.origin()[a]) / r.direction()[a]);
                 auto t1 = ffmax((_min[a] - r.origin()[a]) / r.direction()[a],
@@ -1587,6 +1593,7 @@ class hittable {
 
     
 //求一模型的包围盒，与求一模型的交点属于同一类别
+//output_box是引用参数，就是说会随着下面的操作而改变。因此它本来可能只是默认初始化，到了这一步才有具体的属性
 bool sphere::bounding_box(double t0, double t1, aabb& output_box) const {
     output_box = aabb(
         center - vec3(radius, radius, radius),
@@ -1594,15 +1601,17 @@ bool sphere::bounding_box(double t0, double t1, aabb& output_box) const {
     return true;
 }
     
-//为什么hittable_list里还有bounding_box函数？参考hittable_list里的hit，在对单个物体求交时要先在hittable_list里遍历所有物体    
+//为什么hittable_list里还有bounding_box函数？参考hittable_list里的hit，在对单个物体求交时要先在hittable_list里遍历所有物体。程序运行时应该先对所有列表里的物体求包围盒 
 bool hittable_list::bounding_box(double t0, double t1, aabb& output_box) const {
     if (objects.empty()) return false;
-
+    //验证了上面的猜测，temp_box就是上面的output_box，刚刚默认初始化
     aabb temp_box;
+    //对第一个物体求包围盒时将first_box设为true
     bool first_box = true;
 
     for (const auto& object : objects) {
         //目前还没有哪个物体的bounding_box函数会返回false
+        //传入temp_box，在经过bounding——box函数后会变成该object的包围盒
         if (!object->bounding_box(t0, t1, temp_box)) return false;
         //
         output_box = first_box ? temp_box : surrounding_box(output_box, temp_box);
