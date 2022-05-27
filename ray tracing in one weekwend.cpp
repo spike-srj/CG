@@ -1658,12 +1658,14 @@ class bvh_node : public hittable {
         virtual bool bounding_box(double t0, double t1, aabb& output_box) const;
 
     public:
-    //shared_ptr是个容器类似vector，hittable是容器存储的数据类型，也可以是他的子类，比如sphere，bvh_node
+        //shared_ptr是个容器类似vector，hittable是容器存储的数据类型，也可以是他的子类，比如sphere，bvh_node。
+        //在这里left和right是左右子节点所以肯定也是节点bvh_node
         shared_ptr<hittable> left;
         shared_ptr<hittable> right;
+        //节点除了有子节点还有对应的包围盒
         aabb box;
 };
-
+//这里的box是节点的包围盒，bounding是来计算包围盒的，这函数不是自己求自己吗？？？
 bool bvh_node::bounding_box(double t0, double t1, aabb& output_box) const {
     output_box = box;
     return true;
@@ -1684,7 +1686,7 @@ bool bvh_node::hit(const ray& r, double t_min, double t_max, hit_record& rec) co
 //看不懂    
 #include <algorithm>
 ...
-//这里bvh_node作用域下的bvh_node是什么意思？
+//这里bvh_node作用域下的bvh_node是什么意思？？？
 bvh_node::bvh_node(
     std::vector<shared_ptr<hittable>>& objects,
     size_t start, size_t end, double time0, double time1
