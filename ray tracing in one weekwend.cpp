@@ -1,3 +1,5 @@
+//const放在成员函数末尾表示该成员函数只能读取该类的数据成员，不能改变他们。但是可以改变其他类的数据成员
+
 #include <iostream>
 
 int main() {
@@ -1540,7 +1542,7 @@ class aabb {
 
         vec3 min() const {return _min; }
         vec3 max() const {return _max; }
-
+        //在函数后面使用const表示不可修改class的成员
         bool hit(const ray& r, double tmin, double tmax) const {
             for (int a = 0; a < 3; a++) {
                 //不同的a代表不同的方向，每个方向都有一个t0，t1.这里用ffmin和ffmax后面括号里的内容是一样的，就是要将较小的值赋给t0，较大的给t1。
