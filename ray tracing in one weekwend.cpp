@@ -1754,3 +1754,73 @@ bool box_y_compare (const shared_ptr<hittable> a, const shared_ptr<hittable> b) 
 bool box_z_compare (const shared_ptr<hittable> a, const shared_ptr<hittable> b) {
     return box_compare(a, b, 2);
 }
+
+    
+    
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    
+//光源
+//光源本质上也是一种材质，其特殊之处在于他的成员函数scatter返回的是false，这将用于之后判断world中物体是否是光源
+class diffuse_light : public material  {
+    public:
+        diffuse_light(shared_ptr<texture> a) : emit(a) {}
+
+        virtual bool scatter(
+            const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered
+        ) const {
+            return false;
+        }
+        //emit指向贴图，这里调用了贴图的成员函数，所以光源应该既和材质又和贴图相关
+        virtual vec3 emitted(double u, double v, const vec3& p) const {
+            return emit->value(u, v, p);
+        }
+
+    public:
+        shared_ptr<texture> emit;
+};
+
+    
+class material {
+    public:
+        // 非纯虚函数，虚函数和纯虚函数的区别？？？？
++        virtual vec3 emitted(double u, double v, const vec3& p) const {
++            return vec3(0,0,0);
++        }
+
+        virtual bool scatter(
+            const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered
+        ) const = 0;
+};
+
+    
+vec3 ray_color(const ray& r, const vec3& background, const hittable& world, int depth) {
+        hit_record rec;
+
+        // If we've exceeded the ray bounce limit, no more light is gathered.
+        if (depth <= 0)
+            return vec3(0,0,0);
+
+        // If the ray hits nothing, return the background color.
+        //先判断和物体有没有交点，如果没有则返回背景色（黑色）
+        if (!world.hit(r, 0.001, infinity, rec))
+            return background;
+        //如果有交点执行下面的表达式
+        ray scattered;
+        vec3 attenuation;
+        //上面在material里已经定义了emitted，一般情况下返回黑色
+        vec3 emitted = rec.mat_ptr->emitted(rec.u, rec.v, rec.p);
+        //如果材质的scatter函数返回的是false（目前只有定义成光源的材质才返回false），则返回该材质的emitted函数的返回值。
+        //emitted函数的返回值在上面已经得到。对于光源材质，返回的是光源贴图的成员函数value的返回值
+        if (!rec.mat_ptr->scatter(r, rec, attenuation, scattered))
+            return emitted;
+        //如果该物体的材质不是光源，则返回他的辐射（目前非光源材质没有一点辐射，但不排除以后会出现带辐射的非光源材质）和并接着散射
+        return emitted + attenuation * ray_color(scattered, background, world, depth-1);
+    }
+ ...
+
+    int main() {
+        ...
+        const vec3 background(0,0,0);
+        ...
+                    color += ray_color(r, background, world, max_depth);
+        ...
+    }
