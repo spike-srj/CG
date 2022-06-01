@@ -1,18 +1,10 @@
 整理这篇Ray tracing in one weekend 的思路，介绍整套程序运行的步骤
 
-for (int i = 0; i < image_width; ++i) {
-    vec3 color(0, 0, 0);
-    for (int s = 0; s < samples_per_pixel; ++s) {
-        auto u = (i + random_double()) / image_width;
-        auto v = (j + random_double()) / image_height;
-        ray r = cam.get_ray(u, v);
-
-        color += ray_color(r, world, max_depth);
-    }
-    color.write_color(std::cout, samples_per_pixel);
-    
-    
-//main.cc
+Features
+    光线、可自定义的摄像机、背景、球体
+    多重采样抗锯齿
+    材质（漫反射材质、金属材质、绝缘体玻璃球（折射））
+    散焦模糊
 
 首先当然是main函数
 
@@ -24,14 +16,14 @@ int main() {
     对每个像素采样100次，采样是指采颜色。
         采样是根据xxxxx来采的，这里的空格可以填“whitted-style光追”；“BRDF+路径追踪”；“其他光追模型”
         教材里最开始是根据在图中的不同位置用线性插值法给了渐变的颜色值（没有用ray_color函数）
-        后来教材里用whitted-style光追，首先生成光线auto u = (i + random_double()) / image_width;???ray r = cam.get_ray(u, v);???
+        后来教材里用whitted-style光追，首先生成光线auto u = (i + random_double()) / image_width;???ray r = cam.get_ray(u, v);???这是配合多重采样，对给定像素发射多条射线多次采样求平均
         将光线、模型列表、最大散射次数传入ray_color函数进行递归计算。一个像素的值该由从这一像素所射到相机的光线颜色决定（包含本身发射的光、从其他位置散射、反射来的）
             ray_color首先定义一个相交点结构rec
             要进行两个判断：1是散射次数大于50次返回黑色
             2是判断光线是否与物体相交（调用hittable_list类的hit函数，该hit函数会遍历hittable_list里的所有物体，对每一个物体调用该物体类下的hit函数判断是否相交）
-                如果相交，物体类下的hit函数会更新相交点rec的信息（包括：相交时间、位置、单位法线、法线朝向、材质指针，该指针由创建物体时传入（同时传入的参数有反照率、fuzz），指向一个材质类（可以类比vec3类））
+                如果相交，物体类下的hit函数会更新相交点rec的信息（包括：相交时间、位置、单位法线、法线朝向、材质指针，该指针由创建物体时传入（同时传入的参数有反照率、fuzz模糊程度），指向一个材质类（可以类比vec3类））
                     定义散射光线scattered以及衰减系数attenuation
-                    接着判断是否发生散射（调用材质指针所指类的散射函数，传入scattered和attenuation）
+                    接着判断是否发生散射（调用rec的材质指针所指类的散射函数，传入scattered和attenuation）
                     不同材质的散射函数不同，主要是更新scattered和attenuation。以金属材质为例：
                         先根据入射光线和法线计算反射光线，再根据交点位置和反射光线更新scattered，根据金属的反照率更新attenuation
                         如果scattered与法线同方向则视为发生了散射，此时将更新后的scattered再次传入ray_color函数迭代计算，并乘以一个衰减率。
