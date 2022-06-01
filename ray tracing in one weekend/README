@@ -11,7 +11,7 @@ Features
 int main() {
 首先给定图像尺寸.宽200、高100、每个像素采样100次、光线最多散射50次
 调用要展示的物体，调用random_scene()函数创建hittable_list类。这一类保存了物体信息。
-设置摄像机（起点、看向方向、vup、离焦点距离、aperture、宽高比、fov=20）
+设置摄像机（起点、看向方向、vup、dist_to_focus、aperture、宽高比、fov=20）dist_to_focus和aperture分别是焦距和光圈，由他两实现景深或者称为散焦模糊
 开始遍历每一个像素，在每一个像素下设置初始颜色color（0，0，0）
     对每个像素采样100次，采样是指采颜色。
         采样是根据xxxxx来采的，这里的空格可以填“whitted-style光追”；“BRDF+路径追踪”；“其他光追模型”
