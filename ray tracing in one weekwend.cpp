@@ -1662,6 +1662,7 @@ class bvh_node : public hittable {
     public:
         //shared_ptr是个容器类似vector，hittable是容器存储的数据类型，也可以是他的子类，比如sphere，bvh_node。
         //在这里left和right是左右子节点所以肯定也是节点bvh_node
+        //一个节点的left和right由bvh_node::bvh_node函数赋值
         shared_ptr<hittable> left;
         shared_ptr<hittable> right;
         //节点除了有子节点还有对应的包围盒
@@ -1675,9 +1676,10 @@ bool bvh_node::bounding_box(double t0, double t1, aabb& output_box) const {
     
     
 bool bvh_node::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
+    //如果不与包围盒相交则返回false
     if (!box.hit(r, t_min, t_max))
         return false;
-
+    //只要与包围盒相交就继续判断是否和它里面的包围盒相交，直到包围盒里面没有包围盒，此时left变为hittable类下的物体类（不再是bvh_node类了），因此left->hit就调用了物体类中的hit函数判断是否相交
     bool hit_left = left->hit(r, t_min, t_max, rec);
     bool hit_right = right->hit(r, t_min, hit_left ? rec.t : t_max, rec);
 
