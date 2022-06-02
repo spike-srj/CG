@@ -1,5 +1,7 @@
 整理这篇Ray tracing in next week 的思路，介绍整套程序运行的步骤
 
+！[image](https://github.com/spike-srj/CG/blob/main/ray%20tracing%20in%20next%20week/v2-460d12c611ba27f071c9977864c6a2d0_1440w.jpeg)
+
 Features
 
     光线、可自定义的摄像机、背景
