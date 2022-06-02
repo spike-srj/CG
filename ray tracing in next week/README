@@ -25,13 +25,20 @@ int main() {
                 使用get_sphere_uv函数更新rec的uv坐标    
                     定义散射光线scattered以及衰减系数attenuation
                     接着判断是否发生散射（调用rec的材质指针所指材质类的散射函数，传入scattered和attenuation）
-                    不同材质的散射函数不同，主要是更新scattered和attenuation。以材质为例：
-                        先根据入射光线和法线计算反射光线，再根据交点位置和反射光线更新scattered，根据金属的反照率更新attenuation
+                    不同材质的散射函数不同，主要是更新scattered和attenuation。以lambertian材质为例：
+                        先根据法线计算散射光线，再根据交点位置和散射光线更新scattered，根据金属的反照率更新attenuation
                         此时反照率是一个贴图类，在材质的scatter函数里调用贴图来更新attenuation
                         将更新后的scattered再次传入ray_color函数迭代计算，并乘以一个衰减率。
-                        经过多次迭代直到scattered不再射到物体上，执行返回背景颜色的步骤
-                       
-                        如果没有发生散射，则返回该材质的发光项
+                        经过多次迭代直到scattered不再射到物体上，执行返回背景颜色的步骤                       
+                        如果没有发生散射，则返回该材质的发光项                        
                  如果传入的光线（可能是经过反射散射后的）没有与物体相交，返回背景的颜色（可能会在前面乘以衰减系数）；
         将迭代后的颜色加入color
     采样100次，对color取平均，输出写入xxx文件
+    
+    
+     
+bvh包围盒，分两步，
+第一步是在创建物体列表的最后调用，用以创建bvh包围盒的，return static_cast<hittable_list>(make_shared<bvh_node>(world,0,1))
+第二部，在ray_color中判断光线与物体是否相交时，此时物体被换成了包围盒，先调用bvh的hit函数，直到最后一层包围盒时调用物体的hit函数
+想要使用包围盒需在物体类中加入构建包围盒的函数，这会在第一步用上。最主要的还是创建包围盒，求交时与之前类似
+             
