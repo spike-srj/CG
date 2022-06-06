@@ -52,7 +52,7 @@ Vector3f Scene::castRay(const Ray& ray, int depth) const
 		//light2obj是光源上的交点，由于是根据采样来的lightInter和物体上的inter得到的，因此light2obj理应等于lightInter
 		Intersection light2obj = intersect(light);
 
-		// 如果反射击中光源，light2obj理应等于lightInter，这里用他们的差小于0.01判断
+		// 如果反射击中光源，light2obj理应等于lightInter，这里用他们的差小于0.01判断。但如果物体与光源之间有遮挡，light2obj就在遮挡物体上了
 		if (light2obj.happened && (light2obj.coords - lightPos).norm() < 1e-2)
 		{
 			//获取改材质的brdf，这里的brdf为漫反射（brdf=Kd/pi）
@@ -66,7 +66,7 @@ Vector3f Scene::castRay(const Ray& ray, int depth) const
 		if (get_random_float() < RussianRoulette)
 		{
 			//获取半平面上的随机弹射方向。
-			//sample随机采样
+			//sample随机采样，获得光线击中某点后随机弹射的某个方向
 			Vector3f nextDir = inter.m->sample(ray.direction, N).normalized();
 			//定义弹射光线
 			Ray nextRay(objPos, nextDir);
