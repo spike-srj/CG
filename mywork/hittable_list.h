@@ -5,6 +5,8 @@
 #include <memory>
 #include <vector>
 #include "rtweekend.h"
+#include "sphere.h"
+
 
 using std::shared_ptr;
 using std::make_shared;
@@ -18,12 +20,17 @@ class hittable_list: public hittable {
         hittable_list(shared_ptr<hittable> object) { add(object); }
 
         void clear() { objects.clear(); }
-        void add(shared_ptr<hittable> object) { objects.push_back(object); }
+        void add(shared_ptr<hittable> object) { 
+            objects.push_back(object);
+            size++; }
 
         virtual bool hit(const ray& r, double tmin, double tmax, hit_record& rec) const;
         virtual bool bounding_box(double t0, double t1, aabb& output_box) const;
+        virtual void sampleLight(hit_record &pos, float &pdf);
     public:
         std::vector<shared_ptr<hittable>> objects;
+        int size;
+        
 };
 
 bool hittable_list::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
@@ -42,6 +49,27 @@ bool hittable_list::hit(const ray& r, double t_min, double t_max, hit_record& re
     return hit_anything;
 }
 
+void hittable_list::sampleLight(hit_record &pos, float &pdf)
+{
+
+    float emit_area_sum = 0;
+    for (const auto& object : objects) {
+        if (object.mat_ptr->hasemission(0.01, 0.02, vec3(1,1,1))){
+            emit_area_sum += object->getArea();
+        }
+    }
+    double p = random_double() * emit_area_sum;
+    emit_area_sum = 0;
+    for (const auto& object : objects) {
+        if (object.mat_ptr->hasemission(0.01, 0.02, vec3(1,1,1))){
+            emit_area_sum += object->getArea();
+            if (p <= emit_area_sum){
+                object->Sample(pos, pdf);
+                break;
+            }
+        }
+    }
+}
 
 bool hittable_list::bounding_box(double t0, double t1, aabb& output_box) const {
     if (objects.empty()) return false;

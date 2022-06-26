@@ -8,7 +8,9 @@
 #include <iostream>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-vec3 ray_color(const ray& r, const vec3& background, const hittable& world, int depth) {
+
+
+vec3 ray_color(const ray& r, const vec3& background, hittable_list& world, int depth) {
         hit_record rec;
 
         // If we've exceeded the ray bounce limit, no more light is gathered.
@@ -16,16 +18,61 @@ vec3 ray_color(const ray& r, const vec3& background, const hittable& world, int 
             return vec3(0,0,0);
 
         // If the ray hits nothing, return the background color.
+        //update rec
         if (!world.hit(r, 0.001, infinity, rec))
             return background;
 
-        ray scattered;
-        vec3 attenuation;
-        vec3 emitted = rec.mat_ptr->emitted(rec.u, rec.v, rec.p);
-        if (!rec.mat_ptr->scatter(r, rec, attenuation, scattered))
-            return emitted;
+        // 如果打到物体
+		vec3 L_dir(0, 0, 0);
+		vec3 L_indir(0, 0, 0);
+        //均匀采样光源物体，取光源上一点
+		hit_record lightInter;
+		float pdf_light = 0.0f;
+		world.sampleLight(lightInter, pdf_light);
 
-        return emitted + attenuation * ray_color(scattered, background, world, depth-1);
+		// 物体表面法线
+		auto& N = rec.normal;
+		// 灯光表面法线
+		auto& NN = lightInter.normal;
+		//物体点坐标
+		auto& objPos = rec.p;
+		//光源点坐标
+		auto& lightPos = lightInter.p;
+
+		auto diff = lightPos - objPos;
+		auto lightDir = diff.normalized();
+		float lightDistance = diff.x() * diff.x() + diff.y() * diff.y() + diff.z() * diff.z();
+
+		//从物体打向光源的感光线(感光线为光线传播的逆方向)
+		ray light(objPos, lightDir);
+		//该光线与场景求交
+		hit_record light2obj;
+
+        // 如果反射击中光源
+        if (world.hit(light, 0.001, infinity, light2obj) && (light2obj.p - lightPos).norm() < 1e-2)
+        {
+            //获取改材质的brdf，这里的brdf为漫反射（brdf=Kd/pi）
+            vec3 f_r = rec.mat_ptr->eval(r.dir, lightDir, N);
+            //直接光照光 = 光源光 * brdf * 光线和物体角度衰减 * 光线和光源法线角度衰减 / 光线距离 / 该点的概率密度（1/该光源的面积）
+            L_dir = lightInter.emit * f_r * dot(lightDir, N) * dot(-lightDir, NN) / lightDistance / pdf_light;
+        }
+        float RussianRoulette = 0.8;
+        //俄罗斯轮盘赌，确定是否继续弹射光线
+        if (random_double() < RussianRoulette)
+        {   
+            //scattered = sample
+            ray scattered;
+            vec3 attenuation;
+            vec3 emitted = rec.mat_ptr->emitted(rec.u, rec.v, rec.p);
+            if (!rec.mat_ptr->scatter(r, rec, attenuation, scattered))
+                return emitted;
+            float pdf = rec.mat_ptr->pdf(r.dir, scattered.dir, N);
+            vec3 f_r = rec.mat_ptr->eval(r.dir, scattered.dir, N);
+                L_indir = ray_color(scattered, background, world, depth-1) * f_r * dot(scattered.dir, N) / pdf / RussianRoulette;
+            return emitted + L_indir;
+        }
+        //最后返回直接光照和间接光照
+        return L_dir + L_indir;
     }
 /*
 hittable_list random_scene() {
@@ -133,7 +180,7 @@ hittable_list cornell_box() {
         objects.add(box2);
 
 
-        return objects;
+        return static_cast<hittable_list>(make_shared<bvh_node>(objects,0,0));
     }
 
 //main.cc
@@ -142,9 +189,9 @@ int main() {
     start = clock();
     const vec3 background(0,0,0);
     const int image_width = 200;
-    const int image_height = 100;
+    const int image_height = 200;
     const int samples_per_pixel = 100;
-    const int max_depth = 50;
+    const int max_depth = 300;
     std::cout << "P3\n" << image_width << " " << image_height << "\n255\n";
 
     auto R = cos(pi/4);

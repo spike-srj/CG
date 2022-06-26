@@ -15,9 +15,16 @@ class material {
         virtual vec3 emitted(double u, double v, const vec3& p) const {
             return vec3(0,0,0);
         }
+        virtual bool hasemission(double u, double v, const vec3& p) const {
+            return false;
+        }
         virtual bool scatter(
             const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered
         ) const = 0;
+        virtual vec3 eval(const vec3 &wi, const vec3 &wo, const vec3 &N) const = 0;
+        virtual float pdf(const vec3 &wi, const vec3 &wo, const vec3 &N) const = 0;
+        vec3 Kd, Ks;
+        
 };
 
 
@@ -32,6 +39,22 @@ class lambertian : public material {
             scattered = ray(rec.p, scatter_direction, r_in.time());
             attenuation = albedo->value(rec.u, rec.v, rec.p);
             return true;
+        }
+        virtual vec3 eval(const vec3 &wi, const vec3 &wo, const vec3 &N) const{
+            // calculate the contribution of diffuse   model
+            float cosalpha = dot(N, wo);
+            if (cosalpha > 0.0f) {
+                vec3 diffuse = Kd / M_PI;
+                return diffuse;
+            }
+            else
+                return vec3(0.0f,0.0f,0.0f);
+        }
+        virtual float pdf(const vec3 &wi, const vec3 &wo, const vec3 &N) const{
+            if (dot(wo, N) > 0.0f)
+                return 0.5f / M_PI;
+            else
+                return 0.0f;
         }
 
     public:
@@ -53,7 +76,22 @@ class metal : public material {
             attenuation = albedo;
             return (dot(scattered.direction(), rec.normal) > 0);
         }
-
+        virtual vec3 eval(const vec3 &wi, const vec3 &wo, const vec3 &N) const {
+            // calculate the contribution of diffuse   model
+            float cosalpha = dot(N, wo);
+            if (cosalpha > 0.0f) {
+                vec3 diffuse = Kd / M_PI;
+                return diffuse;
+            }
+            else
+                return vec3(0.0f,0.0f,0.0f);
+        }
+        virtual float pdf(const vec3 &wi, const vec3 &wo, const vec3 &N) const {
+            if (dot(wo, N) > 0.0f)
+                return 0.5f / M_PI;
+            else
+                return 0.0f;
+        }
     public:
         vec3 albedo;
         double fuzz;
@@ -91,7 +129,22 @@ class dielectric : public material {
             scattered = ray(rec.p, refracted);
             return true;
         }
-
+        virtual vec3 eval(const vec3 &wi, const vec3 &wo, const vec3 &N) const {
+            // calculate the contribution of diffuse   model
+            float cosalpha = dot(N, wo);
+            if (cosalpha > 0.0f) {
+                vec3 diffuse = Kd / M_PI;
+                return diffuse;
+            }
+            else
+                return vec3(0.0f,0.0f,0.0f);
+        }
+        virtual float pdf(const vec3 &wi, const vec3 &wo, const vec3 &N) const {
+            if (dot(wo, N) > 0.0f)
+                return 0.5f / M_PI;
+            else
+                return 0.0f;
+        }
     public:
         double ref_idx;
 };
@@ -109,7 +162,9 @@ class diffuse_light : public material  {
         virtual vec3 emitted(double u, double v, const vec3& p) const {
             return emit->value(u, v, p);
         }
-
+        virtual bool hasemission(double u, double v, const vec3& p) const {
+            return true;
+        }
     public:
         shared_ptr<texture> emit;
 };

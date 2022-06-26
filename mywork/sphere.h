@@ -22,10 +22,24 @@ class sphere: public hittable {
             u = 1-(phi + pi) / (2*pi);
             v = (theta + pi/2) / pi;
         }
+        float getArea() const{
+            float area = 4 * M_PI * radius;
+            return area;
+        }
+        void Sample(hit_record &pos, float &pdf){
+            float theta = 2.0 * M_PI * random_double(), phi = M_PI * random_double();
+            vec3 dir(std::cos(phi), std::sin(phi)*std::cos(theta), std::sin(phi)*std::sin(theta));
+            pos.p = center + radius * dir;
+            pos.normal = dir;
+            pos.emit = mat_ptr->emitted(pos.u, pos.v, pos.p);
+            
+            pdf = 1.0f / area;
+        }
     public:
         vec3 center;
         double radius;
         shared_ptr<material> mat_ptr;
+        float area;
 };
 
 
@@ -149,7 +163,7 @@ class xy_rect: public hittable {
             xy_rect() {}
 
             xy_rect(double _x0, double _x1, double _y0, double _y1, double _k, shared_ptr<material> mat)
-                : x0(_x0), x1(_x1), y0(_y0), y1(_y1), k(_k), mp(mat) {};
+                : x0(_x0), x1(_x1), y0(_y0), y1(_y1), k(_k), mat_ptr(mat) {};
 
             virtual bool hit(const ray& r, double t0, double t1, hit_record& rec) const;
 
@@ -159,7 +173,7 @@ class xy_rect: public hittable {
             }
 
         public:
-            shared_ptr<material> mp;
+            shared_ptr<material> mat_ptr;
             double x0, x1, y0, y1, k;
 };
 
@@ -176,7 +190,7 @@ bool xy_rect::hit(const ray& r, double t0, double t1, hit_record& rec) const {
         rec.t = t;
         vec3 outward_normal = vec3(0, 0, 1);
         rec.set_face_normal(r, outward_normal);
-        rec.mat_ptr = mp;
+        rec.mat_ptr = mat_ptr;
         rec.p = r.at(t);
         return true;
     }
@@ -186,7 +200,7 @@ class xz_rect: public hittable {
             xz_rect() {}
 
             xz_rect(double _x0, double _x1, double _z0, double _z1, double _k, shared_ptr<material> mat)
-                : x0(_x0), x1(_x1), z0(_z0), z1(_z1), k(_k), mp(mat) {};
+                : x0(_x0), x1(_x1), z0(_z0), z1(_z1), k(_k), mat_ptr(mat) {};
 
             virtual bool hit(const ray& r, double t0, double t1, hit_record& rec) const;
 
@@ -196,7 +210,7 @@ class xz_rect: public hittable {
             }
 
         public:
-            shared_ptr<material> mp;
+            shared_ptr<material> mat_ptr;
             double x0, x1, z0, z1, k;
     };
 
@@ -204,7 +218,7 @@ class yz_rect: public hittable {
     public:
         yz_rect() {}
 
-        yz_rect(double _y0, double _y1, double _z0, double _z1, double _k, shared_ptr<material> mat): y0(_y0), y1(_y1), z0(_z0), z1(_z1), k(_k), mp(mat) 
+        yz_rect(double _y0, double _y1, double _z0, double _z1, double _k, shared_ptr<material> mat): y0(_y0), y1(_y1), z0(_z0), z1(_z1), k(_k), mat_ptr(mat) 
         {};
 
         virtual bool hit(const ray& r, double t0, double t1, hit_record& rec) const;
@@ -215,7 +229,7 @@ class yz_rect: public hittable {
         }
 
     public:
-        shared_ptr<material> mp;
+        shared_ptr<material> mat_ptr;
         double y0, y1, z0, z1, k;
 };
 
@@ -233,7 +247,7 @@ bool xz_rect::hit(const ray& r, double t0, double t1, hit_record& rec) const {
         rec.t = t;
         vec3 outward_normal = vec3(0, 1, 0);
         rec.set_face_normal(r, outward_normal);
-        rec.mat_ptr = mp;
+        rec.mat_ptr = mat_ptr;
         rec.p = r.at(t);
         return true;
     }
@@ -251,7 +265,7 @@ bool yz_rect::hit(const ray& r, double t0, double t1, hit_record& rec) const {
     rec.t = t;
     vec3 outward_normal = vec3(1, 0, 0);
     rec.set_face_normal(r, outward_normal);
-    rec.mat_ptr = mp;
+    rec.mat_ptr = mat_ptr;
     rec.p = r.at(t);
     return true;
 }

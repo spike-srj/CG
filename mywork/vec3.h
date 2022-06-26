@@ -33,6 +33,11 @@ class vec3 {
         vec3& operator/=(const double t) {
             return *this *= 1/t;
         }
+        float norm() {return std::sqrt(e[0] * e[0] + e[1] * e[1] + e[2] * e[2]);}
+        vec3 normalized() {
+        float n = std::sqrt(e[0] * e[0] + e[1] * e[1] + e[2] * e[2]);
+        return vec3(e[0] / n, e[1] / n, e[2] / n);
+        }
 
         double length() const {
             return sqrt(length_squared());
@@ -151,4 +156,6 @@ vec3 random_in_unit_disk() {
         return p;
     }
 }
+
+
 #endif
