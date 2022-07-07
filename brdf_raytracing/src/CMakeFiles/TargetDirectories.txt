@@ -1,0 +1,3 @@
+/home/leshui/code/mywork/src/CMakeFiles/rebuild_cache.dir
+/home/leshui/code/mywork/src/CMakeFiles/mywork.dir
+/home/leshui/code/mywork/src/CMakeFiles/edit_cache.dir

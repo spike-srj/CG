@@ -1,0 +1,1 @@
+/usr/bin/c++  -g  -rdynamic CMakeFiles/mywork.dir/main.cpp.o CMakeFiles/mywork.dir/material.cpp.o CMakeFiles/mywork.dir/vec3.cpp.o CMakeFiles/mywork.dir/hittable.cpp.o CMakeFiles/mywork.dir/sphere.cpp.o CMakeFiles/mywork.dir/hittable_list.cpp.o  -o mywork 

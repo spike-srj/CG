@@ -1,0 +1,32 @@
+[
+{
+  "directory": "/home/cs18/Documents/mywork_mod2/build",
+  "command": "/usr/bin/c++   -I/home/cs18/Documents/mywork_mod2/include -I/home/cs18/Documents/mywork_mod2/src  -g   -o CMakeFiles/mywork.dir/src/main.cpp.o -c /home/cs18/Documents/mywork_mod2/src/main.cpp",
+  "file": "/home/cs18/Documents/mywork_mod2/src/main.cpp"
+},
+{
+  "directory": "/home/cs18/Documents/mywork_mod2/build",
+  "command": "/usr/bin/c++   -I/home/cs18/Documents/mywork_mod2/include -I/home/cs18/Documents/mywork_mod2/src  -g   -o CMakeFiles/mywork.dir/src/material.cpp.o -c /home/cs18/Documents/mywork_mod2/src/material.cpp",
+  "file": "/home/cs18/Documents/mywork_mod2/src/material.cpp"
+},
+{
+  "directory": "/home/cs18/Documents/mywork_mod2/build",
+  "command": "/usr/bin/c++   -I/home/cs18/Documents/mywork_mod2/include -I/home/cs18/Documents/mywork_mod2/src  -g   -o CMakeFiles/mywork.dir/src/vec3.cpp.o -c /home/cs18/Documents/mywork_mod2/src/vec3.cpp",
+  "file": "/home/cs18/Documents/mywork_mod2/src/vec3.cpp"
+},
+{
+  "directory": "/home/cs18/Documents/mywork_mod2/build",
+  "command": "/usr/bin/c++   -I/home/cs18/Documents/mywork_mod2/include -I/home/cs18/Documents/mywork_mod2/src  -g   -o CMakeFiles/mywork.dir/src/hittable.cpp.o -c /home/cs18/Documents/mywork_mod2/src/hittable.cpp",
+  "file": "/home/cs18/Documents/mywork_mod2/src/hittable.cpp"
+},
+{
+  "directory": "/home/cs18/Documents/mywork_mod2/build",
+  "command": "/usr/bin/c++   -I/home/cs18/Documents/mywork_mod2/include -I/home/cs18/Documents/mywork_mod2/src  -g   -o CMakeFiles/mywork.dir/src/sphere.cpp.o -c /home/cs18/Documents/mywork_mod2/src/sphere.cpp",
+  "file": "/home/cs18/Documents/mywork_mod2/src/sphere.cpp"
+},
+{
+  "directory": "/home/cs18/Documents/mywork_mod2/build",
+  "command": "/usr/bin/c++   -I/home/cs18/Documents/mywork_mod2/include -I/home/cs18/Documents/mywork_mod2/src  -g   -o CMakeFiles/mywork.dir/src/hittable_list.cpp.o -c /home/cs18/Documents/mywork_mod2/src/hittable_list.cpp",
+  "file": "/home/cs18/Documents/mywork_mod2/src/hittable_list.cpp"
+}
+]
