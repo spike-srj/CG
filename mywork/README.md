@@ -16,6 +16,9 @@ Features
     BRDF与蒙特卡洛路径追踪
     
 运行方式：下载mywork文件夹，改名为mywork_mod2（更方便些），进入build目录，输入：
+
 $cmake ..
+
 $make
+
 $./mywork > test2.ppm
