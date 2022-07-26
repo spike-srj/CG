@@ -202,7 +202,7 @@ int main() {
     clock_t start,end;
     start = clock();
     const vec3 background(0,0,0);
-    const int image_width = 1980;
+    const int image_width = 1920;
     const int image_height = 1080;
     const int samples_per_pixel = 300;
     const int max_depth = 300;
