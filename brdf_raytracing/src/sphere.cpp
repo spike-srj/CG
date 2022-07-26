@@ -39,6 +39,38 @@ void sphere::Sample(hit_record &pos, float &pdf){
 }
 
 
+void xy_rect::Sample(hit_record &pos, float &pdf){
+    double theta = (x1-x0) * random_double(), phi = (y1-y0) * random_double();
+    
+    pos.p = vec3(x0+theta,y0+phi,k);
+    pos.normal = vec3(0,0,1);
+    pos.emit = mat_ptr->emitted(pos.u, pos.v, pos.p);
+    
+    pdf = 1.0f / area;
+}
+
+void xz_rect::Sample(hit_record &pos, float &pdf){
+    double theta = (x1-x0) * random_double(), phi = (z1-z0) * random_double();
+    
+    pos.p = vec3(x0+theta,k,z0+phi);
+    pos.normal = vec3(0,1,0);
+    pos.emit = mat_ptr->emitted(pos.u, pos.v, pos.p);
+    
+    pdf = 1.0f / area;
+}
+
+void yz_rect::Sample(hit_record &pos, float &pdf){
+    double theta = (z1-z0) * random_double(), phi = (y1-y0) * random_double();
+    
+    pos.p = vec3(k,y0+phi,z0+theta);
+    pos.normal = vec3(1,0,0);
+    pos.emit = mat_ptr->emitted(pos.u, pos.v, pos.p);
+    
+    pdf = 1.0f / area;
+}
+
+
+
 bool sphere::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
     vec3 oc = r.origin() - center;
     auto a = r.direction().length_squared();

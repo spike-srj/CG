@@ -55,7 +55,7 @@ vec3 ray_color(const ray& r, const vec3& background, hittable_list& world, int d
         if (world.hit(light, 0.001, infinity, light2obj) && (light2obj.p - lightPos).norm() < 1e-2)
         {
             //获取改材质的brdf，这里的brdf为漫反射（brdf=Kd/pi）
-            vec3 f_r = rec.mat_ptr->eval(r.dir, lightDir, N);
+            vec3 f_r = rec.mat_ptr->eval(r.dir, lightDir, N, rec);
             //直接光照光 = 光源光 * brdf * 光线和物体角度衰减 * 光线和光源法线角度衰减 / 光线距离 / 该点的概率密度（1/该光源的面积）
             L_dir = lightInter.emit * f_r * dot(lightDir, N) * dot(-lightDir, NN) / lightDistance / pdf_light;
         }
@@ -70,7 +70,7 @@ vec3 ray_color(const ray& r, const vec3& background, hittable_list& world, int d
             if (!rec.mat_ptr->scatter(r, rec, attenuation, scattered))
                 return emitted;
             float pdf = rec.mat_ptr->pdf(r.dir, scattered.dir, N);
-            vec3 f_r = rec.mat_ptr->eval(r.dir, scattered.dir, N);
+            vec3 f_r = rec.mat_ptr->eval(r.dir, scattered.dir, N, rec);
             L_indir = ray_color(scattered, background, world, depth-1) * f_r * dot(scattered.dir, N) / pdf / RussianRoulette;
             L_indir = emitted + L_indir;
         }
@@ -149,10 +149,10 @@ hittable_list simple_light() {
 
         auto pertext = make_shared<noise_texture>(4);
         auto obj1 =  make_shared<lambertian>(pertext);
-        obj1->Kd = vec3(0.63f, 0.065f, 0.05f);
+        //obj1->Kd = vec3(0.63f, 0.065f, 0.05f);
         objects.add(make_shared<sphere>(vec3(0,-1000, 0), 1000,obj1));
         auto obj2 =  make_shared<lambertian>(pertext);
-        obj2->Kd = vec3(0.14f, 0.45f, 0.091f);
+        //obj2->Kd = vec3(0.14f, 0.45f, 0.091f);
         objects.add(make_shared<sphere>(vec3(0,2,0), 2, obj2));
 
         auto difflight = make_shared<diffuse_light>(make_shared<constant_texture>(vec3(4,4,4)));
@@ -209,7 +209,7 @@ int main() {
     std::cout << "P3\n" << image_width << " " << image_height << "\n255\n";
 
     auto R = cos(pi/4);
-    auto world = simple_light();//cornell_box();///////
+    auto world = simple_light();  //cornell_box();
 
     //vec3 lookfrom(278, 278, -800);
     //vec3 lookat(278,278,0);
@@ -221,7 +221,7 @@ int main() {
     auto dist_to_focus = 10.0;
     auto aperture = 0.0;
     const auto aspect_ratio = double(image_width) / image_height;
-    camera cam(lookfrom, lookat, vup, 40, aspect_ratio, aperture, dist_to_focus, 0.0, 1.0);  //20-40
+    camera cam(lookfrom, lookat, vup, 70, aspect_ratio, aperture, dist_to_focus, 0.0, 1.0);  //20-40
     for (int j = image_height-1; j >= 0; --j) {
         std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
         for (int i = 0; i < image_width; ++i) {

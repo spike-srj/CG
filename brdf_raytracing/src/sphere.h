@@ -64,6 +64,7 @@ class xy_rect: public hittable {
                 return true;
             }
             virtual double getArea() const;
+            virtual void Sample(hit_record &pos, float &pdf);
             
              
 
@@ -89,6 +90,7 @@ class xz_rect: public hittable {
                 return true;
             }
             virtual double getArea() const;
+            virtual void Sample(hit_record &pos, float &pdf);
 
         public:
             shared_ptr<material> mp;
@@ -110,6 +112,7 @@ class yz_rect: public hittable {
             return true;
         }
         virtual double getArea() const;
+        virtual void Sample(hit_record &pos, float &pdf);
 
     public:
         shared_ptr<material> mp;

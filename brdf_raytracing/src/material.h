@@ -25,13 +25,13 @@ class material {
         virtual bool scatter(
             const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered
         ) const = 0;
-        virtual vec3 eval(const vec3 &wi, const vec3 &wo, const vec3 &N) const = 0;
+        virtual vec3 eval(const vec3 &wi, const vec3 &wo, const vec3 &N, const hit_record& rec) const = 0;
         virtual float pdf(const vec3 &wi, const vec3 &wo, const vec3 &N) const = 0;
         vec3 Kd, Ks;
         
 };
 
-
+//xiugaile 
 class lambertian : public material {
     public:
         lambertian(shared_ptr<texture> a) : albedo(a) {}
@@ -40,11 +40,12 @@ class lambertian : public material {
             const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered
         ) const ;
 
-        virtual vec3 eval(const vec3 &wi, const vec3 &wo, const vec3 &N) const{
+        virtual vec3 eval(const vec3 &wi, const vec3 &wo, const vec3 &N, const hit_record& rec) const{
             // calculate the contribution of diffuse   model
             float cosalpha = dot(N, wo);
             if (cosalpha > 0.0f) {
-                vec3 diffuse = Kd / M_PI;
+                
+                vec3 diffuse = albedo->value(rec.u, rec.v, rec.p) / M_PI;  //Kd
                 return diffuse;
             }
             else
@@ -62,7 +63,7 @@ class lambertian : public material {
 };
 
 
-
+// xiugaile 
 class metal : public material {
     public:
         metal(const vec3& a, double f) : albedo(a), fuzz(f < 1 ? f : 1) {}
@@ -76,11 +77,12 @@ class metal : public material {
             attenuation = albedo;
             return (dot(scattered.direction(), rec.normal) > 0);
         }
-        virtual vec3 eval(const vec3 &wi, const vec3 &wo, const vec3 &N) const {
+        virtual vec3 eval(const vec3 &wi, const vec3 &wo, const vec3 &N, const hit_record& rec) const{
             // calculate the contribution of diffuse   model
             float cosalpha = dot(N, wo);
             if (cosalpha > 0.0f) {
-                vec3 diffuse = Kd / M_PI;
+                
+                vec3 diffuse = albedo / M_PI;  //Kd
                 return diffuse;
             }
             else
@@ -99,7 +101,7 @@ class metal : public material {
 
 
 
-
+//no texture
 class dielectric : public material {
     public:
         dielectric(double ri) : ref_idx(ri) {}
@@ -129,7 +131,7 @@ class dielectric : public material {
             scattered = ray(rec.p, refracted);
             return true;
         }
-        virtual vec3 eval(const vec3 &wi, const vec3 &wo, const vec3 &N) const {
+        virtual vec3 eval(const vec3 &wi, const vec3 &wo, const vec3 &N, const hit_record& rec) const {
             // calculate the contribution of diffuse   model
             float cosalpha = dot(N, wo);
             if (cosalpha > 0.0f) {
@@ -166,7 +168,7 @@ class diffuse_light : public material  {
             return true;
         }
 
-        virtual vec3 eval(const vec3 &wi, const vec3 &wo, const vec3 &N) const {
+        virtual vec3 eval(const vec3 &wi, const vec3 &wo, const vec3 &N, const hit_record& rec) const {
             float cosalpha = dot(N, wo);
             if (cosalpha > 0.0f) {
                 vec3 diffuse = Kd / M_PI;
